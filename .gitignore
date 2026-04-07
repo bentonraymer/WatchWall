@@ -1,0 +1,6 @@
+node_modules/
+dist/
+out/
+DOCS.md
+architecure.md
+watchwall.md
