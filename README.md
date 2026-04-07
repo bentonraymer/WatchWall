@@ -10,14 +10,14 @@ I built WatchWall to solve my ongoing search for a solution to viewing many stre
 
 ## Features
 
-**Flexible Grid Layouts**
+### Flexible Grid Layouts
 WatchWall supports 1 to 16 panels with a full layout system for every box count. Choose from equal grids, sidebar arrangements with a dominant primary panel, or bottom-strip layouts. The app picks a sensible default as you add panels, and you can swap layouts at any time without losing what's loaded in any tab.
 For every box count, you can also switch to a Main + Sidebar or Main + Bottom layout where the highlighted panel gets promoted to the large primary slot.
 
-**Smart Audio Routing & Simple Switching**
+### Smart Audio Routing & Simple Switching
 Only one panel plays audio at a time. Highlighting a panel unmutes it and mutes the rest, so you never fight for audio between tabs. Want to have one panel always audible? Per-panel audio overrides let you pin audio on as many panels as you want, independent of which one is highlighted.
 
-**Per-Panel Menu Bar**
+### Per-Panel Menu Bar
 Hover over any panel to get a quick-access menu without leaving the grid:
 
 - **Go to URL** — navigate that panel to any URL or search query
@@ -25,28 +25,28 @@ Hover over any panel to get a quick-access menu without leaving the grid:
 - **Audio Override** — toggle persistent audio on/off for this panel
 - **Close** — remove the panel; all other panels continue uninterrupted
 
-**URL Bar**
+### URL Bar
 WatchWall supports any streaming service, video platform, or website that works in a web browser. It is not just limited to videos. For example, pull up a dashboard or radar to monitor alongside your streams. Each panel has a button to open a URL bar, allowing you to navigate to any site.
 
-**Highlighted Panel & Primary Slot Swapping**
+### Highlighted Panel & Primary Slot Swapping
 Highlighting a panel does more than just switch audio. In layouts with a defined primary slot (Main + Sidebar, Main + Bottom), the highlighted panel swaps positions with whatever was in the primary slot. All page state, scroll position, and playback continue without interruption — only the position changes.
 
-**Box Number Overlays**
+### Box Number Overlays
 Toggle numbered badges over every panel to keep track of what's where. Badges appear in the top-left corner of each panel and never block interaction with the underlying page. This also simplifies usage of hotkeys, noted below.
 
-**Session Persistance**
+### Session Persistance
 WatchWall remembers your session. On next launch, you're offered the option to restore exactly where you left off — layout, box count, all loaded URLs, audio override states, highlight position, and window size. Sessions autosave on every meaningful change.
 
-**Bottom App Hover Menu**
+### Bottom App Hover Menu
 A bottom-edge hover zone gives you quick access to Add Panel, the Layout Picker, and the settings menu.
 
-**Customizable**
+### Customizable
 The settings menu allows you to:
 - Disable or enable keyboard shortcuts
 - Disable or change the color of the highlighted box indicator
 - Modify quick-launch site options presented to you when opening a new panel
 
-**Keyboard Shorcuts**
+### Keyboard Shorcuts
 
 | Key | Action |
 | --- | --- |
