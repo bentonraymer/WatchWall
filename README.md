@@ -1,3 +1,5 @@
+![Logo](watchwall.png)
+
 # WatchWall
 WatchWall is a desktop application built with Electron that lets you watch and browse up to 16 live web views simultaneously in a clean, non-overlapping grid. Every panel is a full browser — defaulting to YouTube — so you can monitor streams, tabs, dashboards, or anything else on the web without juggling windows.
 
