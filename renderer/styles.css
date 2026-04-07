@@ -1,0 +1,947 @@
+/* ── CSS Custom Properties ───────────────────────────────── */
+:root {
+  --highlight-color: #3ea6ff; /* updated by JS when the user changes the setting */
+}
+
+/* ── Reset & Base ───────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0f0f0f;
+  color: #e8e8e8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── App Shell ──────────────────────────────────────────── */
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Shared Controls ────────────────────────────────────── */
+.menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: transparent;
+  color: #c8c8c8;
+  border: 1px solid #333;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 1;
+  transition: background 100ms, color 100ms, border-color 100ms;
+  white-space: nowrap;
+}
+
+.menu-btn:hover {
+  background: #2a2a2a;
+  color: #ffffff;
+  border-color: #444;
+}
+
+.menu-btn:active {
+  background: #333;
+}
+
+.menu-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.menu-btn[aria-pressed="true"] {
+  background: #1e3a5f;
+  color: #3ea6ff;
+  border-color: #2a5a8f;
+}
+
+.menu-label {
+  font-size: 12px;
+  color: #888;
+}
+
+.menu-select {
+  padding: 4px 8px;
+  background: #1a1a1a;
+  color: #c8c8c8;
+  border: 1px solid #333;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 100ms;
+  max-width: 220px;
+}
+
+.menu-select:hover {
+  border-color: #444;
+  color: #ffffff;
+}
+
+.menu-select:focus {
+  border-color: #3ea6ff;
+}
+
+/* Style the dropdown options */
+.menu-select option {
+  background: #1a1a1a;
+  color: #e8e8e8;
+}
+
+.menu-separator {
+  width: 1px;
+  height: 18px;
+  background: #2e2e2e;
+  flex: 0 0 auto;
+}
+
+/* ── Grid Area ──────────────────────────────────────────── */
+/* Centering shell — letterbox background shows when stage doesn't fill */
+#grid-area {
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f0f0f;
+}
+
+/* Grid stage — sized in pixels by JS to the largest 16:9-correct
+   rectangle that fits the available area */
+#grid-stage {
+  display: grid;
+  flex: 0 0 auto;
+  /* gridTemplateColumns / gridTemplateRows set by app.js */
+}
+
+/* ── Box Wrapper ────────────────────────────────────────── */
+.box {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  /* 1px border between boxes for visual separation */
+  outline: 1px solid #1e1e1e;
+  outline-offset: -1px;
+}
+
+/* Highlighted box: outline kept for the brief moment before the webview
+   renders; the persistent indicator is the inset box-shadow on the
+   click-guard overlay (z-index 10), which sits above the webview. */
+.box--highlighted {
+  outline: 2px solid var(--highlight-color);
+  outline-offset: -2px;
+}
+
+/* ── Webview ─────────────────────────────────────────────── */
+.box webview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ── Click Guard ─────────────────────────────────────────── */
+/* Transparent overlay above the webview. Captures clicks on unhighlighted
+   boxes so they switch highlight without the click reaching YouTube.
+   Disabled (pointer-events:none) on the highlighted box so the user can
+   interact with that webview normally. */
+.box-click-guard {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.box--highlighted .box-click-guard {
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--highlight-color);
+}
+
+/* ── Session Restore Dialog ──────────────────────────────── */
+#restore-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 4000; /* above everything */
+  align-items: center;
+  justify-content: center;
+}
+
+#restore-backdrop.visible {
+  display: flex;
+}
+
+#restore-dialog {
+  background: #1c1c1c;
+  border: 1px solid #383838;
+  border-radius: 12px;
+  padding: 28px 32px 24px;
+  width: 340px;
+  max-width: calc(100vw - 48px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+.restore-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.restore-body {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.restore-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.restore-btn {
+  flex: 1;
+  padding: 8px 16px;
+  background: #2a2a2a;
+  color: #c8c8c8;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms, color 100ms;
+}
+
+.restore-btn:hover {
+  background: #333;
+  border-color: #505050;
+  color: #fff;
+}
+
+.restore-btn--primary {
+  background: #3ea6ff;
+  color: #000;
+  border-color: #3ea6ff;
+  font-weight: 600;
+}
+
+.restore-btn--primary:hover {
+  background: #5ab8ff;
+  border-color: #5ab8ff;
+  color: #000;
+}
+
+/* ── New Box Picker ──────────────────────────────────────── */
+#newbox-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 3200;
+  align-items: center;
+  justify-content: center;
+}
+
+#newbox-backdrop.visible {
+  display: flex;
+}
+
+#newbox-dialog {
+  background: #1c1c1c;
+  border: 1px solid #383838;
+  border-radius: 12px;
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+#newbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+#newbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+  gap: 6px;
+  padding: 14px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+#newbox-grid:empty::after,
+#newbox-grid .newbox-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #484848;
+  font-size: 12px;
+  padding: 24px 0;
+}
+
+.site-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 8px 11px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #b0b0b0;
+  font-family: inherit;
+  transition: background 100ms, border-color 100ms, color 100ms;
+}
+
+.site-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.site-btn:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.site-btn-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: #111;
+}
+
+/* Fallback placeholder when favicon fails to load */
+.site-btn-icon-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  flex: 0 0 auto;
+}
+
+.site-btn-label {
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.3;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "Go to URL" variant — dashed border distinguishes it from preset sites */
+.site-btn--custom {
+  border: 1px dashed #383838;
+  color: #888;
+}
+
+.site-btn--custom:hover {
+  border-color: #3ea6ff;
+  color: #3ea6ff;
+  background: rgba(62, 166, 255, 0.06);
+}
+
+.site-btn--custom .site-btn-icon-fallback {
+  color: inherit;
+}
+
+/* ── Settings Popup ──────────────────────────────────────── */
+#settings-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 3500;
+  align-items: center;
+  justify-content: center;
+}
+
+#settings-backdrop.visible {
+  display: flex;
+}
+
+#settings-dialog {
+  background: #1c1c1c;
+  border: 1px solid #383838;
+  border-radius: 12px;
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+#settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+#settings-logo-section {
+  padding: 22px 24px 16px;
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+#settings-logo {
+  width: 88%;
+  height: auto;
+  object-fit: contain;
+}
+
+.settings-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+#settings-footer {
+  border-top: 1px solid #222;
+  padding: 9px 18px;
+  text-align: center;
+  font-size: 11px;
+  color: #383838;
+  letter-spacing: 0.03em;
+}
+
+.settings-close-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #777;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 100ms, color 100ms;
+  flex: 0 0 auto;
+}
+
+.settings-close-btn:hover {
+  background: #2e2e2e;
+  color: #e8e8e8;
+}
+
+#settings-body {
+  padding: 4px 0 8px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 18px;
+  transition: background 80ms;
+}
+
+.settings-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.settings-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-row-label {
+  font-size: 13px;
+  color: #e8e8e8;
+  font-weight: 500;
+}
+
+.settings-row-desc {
+  font-size: 11px;
+  color: #5a5a5a;
+  line-height: 1.4;
+}
+
+/* Section label inside settings (e.g. "Quick Launch Sites") */
+.settings-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #484848;
+  padding: 12px 18px 4px;
+}
+
+/* Settings — individual site row */
+#settings-sites-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.settings-site-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 18px;
+  transition: background 80ms;
+}
+
+.settings-site-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.settings-site-favicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background: #111;
+}
+
+.settings-site-label {
+  flex: 1;
+  font-size: 12px;
+  color: #c0c0c0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.settings-site-remove {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #555;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 100ms, color 100ms;
+}
+
+.settings-site-remove:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff7070;
+}
+
+/* Settings — add-site row */
+.settings-add-site-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 18px 14px;
+}
+
+.settings-add-site-input {
+  flex: 1;
+  padding: 5px 10px;
+  background: #0f0f0f;
+  border: 1px solid #2e2e2e;
+  border-radius: 5px;
+  color: #e8e8e8;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 100ms;
+  min-width: 0;
+}
+
+.settings-add-site-input:focus {
+  border-color: #3ea6ff;
+}
+
+.settings-add-site-input::placeholder {
+  color: #3a3a3a;
+}
+
+.settings-add-site-btn {
+  flex: 0 0 auto;
+  padding: 5px 14px;
+  background: #1e3a5f;
+  color: #3ea6ff;
+  border: 1px solid #2a5a8f;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 100ms;
+  white-space: nowrap;
+}
+
+.settings-add-site-btn:hover {
+  background: #274e80;
+}
+
+/* Highlight settings row — toggle + color swatch side by side */
+.settings-highlight-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+input[type="color"].settings-color-input {
+  -webkit-appearance: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #383838;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+  transition: border-color 100ms, opacity 100ms;
+}
+
+input[type="color"].settings-color-input:hover {
+  border-color: #555;
+}
+
+input[type="color"].settings-color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"].settings-color-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+input[type="color"].settings-color-input:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Toggle switch */
+.toggle-switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #333;
+  transition: background 150ms;
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #666;
+  transition: transform 150ms, background 150ms;
+}
+
+.toggle-switch input:checked + .toggle-track {
+  background: #1e3a5f;
+}
+
+.toggle-switch input:checked + .toggle-track::after {
+  transform: translateX(16px);
+  background: #3ea6ff;
+}
+
+/* ── URL Popup ───────────────────────────────────────────── */
+#url-popup-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+}
+
+#url-popup-backdrop.visible {
+  display: flex;
+}
+
+#url-popup {
+  background: #1c1c1c;
+  border: 1px solid #383838;
+  border-radius: 12px;
+  padding: 20px;
+  width: 560px;
+  max-width: calc(100vw - 48px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+}
+
+#url-popup-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f0f0f;
+  border: 1px solid #2e2e2e;
+  border-radius: 999px;
+  padding: 5px 5px 5px 8px;
+}
+
+#url-engine-toggle {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #3a3a3a;
+  background: #222;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 100ms, border-color 100ms;
+  line-height: 1;
+}
+
+#url-engine-toggle:hover {
+  background: #2e2e2e;
+  border-color: #555;
+}
+
+#url-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e8e8e8;
+  font-size: 14px;
+  font-family: inherit;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+#url-input::placeholder {
+  color: #484848;
+}
+
+#url-submit {
+  flex: 0 0 auto;
+  padding: 5px 18px;
+  background: #3ea6ff;
+  color: #000;
+  border: none;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 100ms;
+}
+
+#url-submit:hover {
+  background: #5ab8ff;
+}
+
+/* ── Box Number Overlay ──────────────────────────────────── */
+.box-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 20; /* above click-guard (10), below hover menu (30) */
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1;
+  padding: 4px 7px;
+  border-radius: 5px;
+  pointer-events: none; /* never blocks webview or click-guard interaction */
+  opacity: 0;
+  transition: opacity 150ms;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#grid-stage.overlays-active .box-overlay {
+  opacity: 1;
+}
+
+/* ── Audio Override Indicator ────────────────────────────── */
+/* Speaker badge, top-right corner; only visible when override is active. */
+.box-audio-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20; /* same level as box-overlay, above click-guard (10) */
+  background: rgba(0, 0, 0, 0.62);
+  color: #3ea6ff;
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.box-audio-indicator.active {
+  opacity: 1;
+}
+
+/* ── Per-Box Hover Menu ──────────────────────────────────── */
+.box-menu {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30; /* above click-guard (10) and highlight ring */
+  display: flex;
+  gap: 4px;
+  padding: 5px 6px;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+  white-space: nowrap;
+}
+
+.box:hover .box-menu {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.box-menu-btn {
+  padding: 3px 9px;
+  background: transparent;
+  color: #d8d8d8;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: background 100ms, border-color 100ms, color 100ms;
+  white-space: nowrap;
+}
+
+.box-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+.box-menu-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.box-menu-btn--close {
+  color: #ff7070;
+  border-color: rgba(255, 100, 100, 0.2);
+}
+
+.box-menu-btn--close:hover {
+  background: rgba(255, 80, 80, 0.15);
+  border-color: rgba(255, 100, 100, 0.45);
+  color: #ff9090;
+}
+
+/* ── Bottom Bar Logo ─────────────────────────────────────── */
+#bottom-bar-logo {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 3px;
+  opacity: 0.7;
+  flex: 0 0 auto;
+}
+
+/* ── Bottom Hover Zone ───────────────────────────────────── */
+/* #bottom-trigger: always-on 40px strip that intercepts cursor events even
+   when the cursor is over a webview (sits above at z-index 1000).
+   #window-hover-menu: floats above the trigger, toggled via JS. */
+#bottom-hover-zone {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+#bottom-trigger {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  pointer-events: auto;
+}
+
+#window-hover-menu {
+  position: absolute;
+  bottom: 0; /* docked to the screen edge — cursor is already on it when menu appears */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(18, 18, 18, 0.94);
+  border: 1px solid #2e2e2e;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+  white-space: nowrap;
+}
+
+#window-hover-menu.visible {
+  opacity: 1;
+  pointer-events: auto;
+}

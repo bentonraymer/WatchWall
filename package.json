@@ -1,0 +1,30 @@
+{
+  "name": "WatchWall",
+  "version": "0.1.0",
+  "description": "Watch multiple web views simultaneously in a structured grid layout",
+  "main": "main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.WatchWall.app",
+    "productName": "WatchWall",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.entertainment"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
