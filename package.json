@@ -2,14 +2,18 @@
   "name": "WatchWall",
   "version": "1.0.0",
   "description": "Watch multiple web views simultaneously in a structured grid layout",
+  "author": {
+    "name": "Benton Raymer",
+    "email": "benton.raymer@gmail.com"
+  },
   "main": "main/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder",
-    "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux",
-    "build:all": "electron-builder -mwl"
+    "build": "electron-builder --publish never",
+    "build:mac": "electron-builder --mac --publish never",
+    "build:win": "electron-builder --win --publish never",
+    "build:linux": "electron-builder --linux --publish never",
+    "build:all": "electron-builder -mwl --publish never"
   },
   "devDependencies": {
     "electron": "^29.0.0",
