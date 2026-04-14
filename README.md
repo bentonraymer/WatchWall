@@ -3,6 +3,8 @@
 # WatchWall
 WatchWall is a desktop application built with Electron that lets you watch and browse up to 16 live web views simultaneously in a clean, non-overlapping grid. Every panel is a full browser — defaulting to YouTube — so you can monitor streams, tabs, dashboards, or anything else on the web without juggling windows.
 
+![Screenshot2](screenshots/example2.png)
+
 ## Example Use Cases
 I built WatchWall to solve my ongoing search for a solution to viewing many streams for use cases such as:
 - Multiple Sporting Events
@@ -72,6 +74,10 @@ npm start
 # Build for distribution
 npm run build
 ```
+
+## Additional Screenshots
+![Screenshot1](screenshots/example1.png)
+![Screenshot3](screenshots/example3.png)
 
 ## Development Disclaimer
 WatchWall was developed primarily using Claude Code, including Claude Sonnet 4.6 and Claude Opus 4.6.
