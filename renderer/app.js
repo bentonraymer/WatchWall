@@ -377,6 +377,8 @@ const prefs = {
   highlightEnabled: true,
   menuPosition: 'bottom',   // 'bottom' | 'top' | 'left' | 'right'
   menuPinned:   false,      // true = always visible, false = hover to reveal
+  boxGap:       0,          // px gap between grid cells (0–20)
+  boxRounded:   false,      // true = 8px border-radius on each box
 };
 
 async function savePrefs() {
@@ -387,6 +389,8 @@ async function savePrefs() {
       highlightEnabled: prefs.highlightEnabled,
       menuPosition:     prefs.menuPosition,
       menuPinned:       prefs.menuPinned,
+      boxGap:           prefs.boxGap,
+      boxRounded:       prefs.boxRounded,
     });
   } catch {}
 }
@@ -402,6 +406,17 @@ function applyHighlightStyle() {
 // Apply defaults immediately (before prefs file is loaded) so the first
 // render uses the right color.
 applyHighlightStyle();
+
+// Applies box gap and border-radius from prefs to CSS custom properties.
+// Safe to call at any time — only touches :root CSS variables.
+function applyBoxStyles() {
+  const gap    = Number.isFinite(prefs.boxGap) ? Math.max(0, Math.min(20, prefs.boxGap)) : 0;
+  const radius = prefs.boxRounded ? '8px' : '0px';
+  document.documentElement.style.setProperty('--box-gap',    gap + 'px');
+  document.documentElement.style.setProperty('--box-radius', radius);
+}
+
+applyBoxStyles();
 
 // Applies the menu position and pin preference to the DOM.
 // Sets data-menu-pos on <body> (drives all CSS position rules) and the
@@ -1110,6 +1125,24 @@ document.addEventListener('DOMContentLoaded', () => {
     savePrefs();
   });
 
+  // ── Settings — box appearance ─────────────────────────
+  const boxGapRange  = document.getElementById('setting-box-gap');
+  const boxGapLabel  = document.getElementById('setting-box-gap-label');
+  const boxRoundedCb = document.getElementById('setting-box-rounded');
+
+  boxGapRange.addEventListener('input', (e) => {
+    prefs.boxGap = Number(e.target.value);
+    boxGapLabel.textContent = prefs.boxGap + 'px';
+    applyBoxStyles();
+    savePrefs();
+  });
+
+  boxRoundedCb.addEventListener('change', (e) => {
+    prefs.boxRounded = e.target.checked;
+    applyBoxStyles();
+    savePrefs();
+  });
+
   // ── URL Popup controls ───────────────────────────────
   const urlInput    = document.getElementById('url-input');
   const urlBackdrop = document.getElementById('url-popup-backdrop');
@@ -1181,8 +1214,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (Array.isArray(data.sites) && data.sites.length > 0) prefs.sites = data.sites;
       if (typeof data.highlightColor   === 'string')  prefs.highlightColor   = data.highlightColor;
       if (typeof data.highlightEnabled === 'boolean') prefs.highlightEnabled = data.highlightEnabled;
-      if (typeof data.menuPosition     === 'string')  prefs.menuPosition     = data.menuPosition;
-      if (typeof data.menuPinned       === 'boolean') prefs.menuPinned       = data.menuPinned;
+      if (typeof data.menuPosition     === 'string')  prefs.menuPosition = data.menuPosition;
+      if (typeof data.menuPinned       === 'boolean') prefs.menuPinned   = data.menuPinned;
+      if (typeof data.boxGap           === 'number')  prefs.boxGap       = data.boxGap;
+      if (typeof data.boxRounded       === 'boolean') prefs.boxRounded   = data.boxRounded;
     }
     // Sync settings UI to loaded values.
     highlightColorInput.value     = prefs.highlightColor;
@@ -1190,10 +1225,14 @@ document.addEventListener('DOMContentLoaded', () => {
     highlightEnabledInput.checked = prefs.highlightEnabled;
     menuPositionSelect.value      = prefs.menuPosition;
     menuPinnedInput.checked       = prefs.menuPinned;
+    boxGapRange.value             = prefs.boxGap;
+    boxGapLabel.textContent       = prefs.boxGap + 'px';
+    boxRoundedCb.checked          = prefs.boxRounded;
     applyHighlightStyle();
+    applyBoxStyles();
     applyMenuSettings();
     renderSettingsSites();
-  }).catch(() => { applyHighlightStyle(); applyMenuSettings(); renderSettingsSites(); });
+  }).catch(() => { applyHighlightStyle(); applyBoxStyles(); applyMenuSettings(); renderSettingsSites(); });
 
   // ── Session check — show restore dialog or start fresh ──
   window.api.sessionExists().then((has) => {

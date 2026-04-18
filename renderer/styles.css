@@ -1,6 +1,8 @@
 /* ── CSS Custom Properties ───────────────────────────────── */
 :root {
   --highlight-color: #3ea6ff; /* updated by JS when the user changes the setting */
+  --box-gap:    0px;          /* gap between grid cells; updated by applyBoxStyles() */
+  --box-radius: 0px;          /* border-radius on each box; updated by applyBoxStyles() */
 }
 
 /* ── Reset & Base ───────────────────────────────────────── */
@@ -124,6 +126,7 @@ body {
 #grid-stage {
   display: grid;
   flex: 0 0 auto;
+  gap: var(--box-gap);
   /* gridTemplateColumns / gridTemplateRows set by app.js */
 }
 
@@ -132,6 +135,7 @@ body {
   position: relative;
   overflow: hidden;
   background: #000;
+  border-radius: var(--box-radius);
   /* 1px border between boxes for visual separation */
   outline: 1px solid #1e1e1e;
   outline-offset: -1px;
@@ -164,6 +168,7 @@ body {
   inset: 0;
   z-index: 10;
   cursor: pointer;
+  border-radius: inherit; /* follow .box border-radius so the highlight ring rounds too */
 }
 
 .box--highlighted .box-click-guard {
@@ -603,6 +608,52 @@ body {
 
 .settings-add-site-btn:hover {
   background: #274e80;
+}
+
+/* Gap settings row — range slider + numeric readout */
+.settings-gap-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.settings-range {
+  -webkit-appearance: none;
+  width: 90px;
+  height: 4px;
+  border-radius: 2px;
+  background: #333;
+  outline: none;
+  cursor: pointer;
+  transition: background 100ms;
+}
+
+.settings-range:hover {
+  background: #444;
+}
+
+.settings-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3ea6ff;
+  cursor: pointer;
+  transition: background 100ms, transform 100ms;
+}
+
+.settings-range::-webkit-slider-thumb:hover {
+  background: #5ab8ff;
+  transform: scale(1.15);
+}
+
+.settings-range-label {
+  font-size: 11px;
+  color: #888;
+  min-width: 28px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Highlight settings row — toggle + color swatch side by side */
