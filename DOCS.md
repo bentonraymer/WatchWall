@@ -817,6 +817,14 @@ Webview preload scripts run in a sandboxed context (no `require`). `executeJavaS
 
 Event listeners created in `createBox()` reference `box.id` via the live `box` object. After `renumberBoxes()` mutates `box.id`, those listeners automatically use the new ID. But DOM lookups by old ID must complete **before** the mutation.
 
+### Asset Paths in Packaged Builds
+
+In development, `src="../watchwall.png"` in `renderer/index.html` resolves fine (goes up one level to the project root). In a packaged `.asar` archive, the Electron/Chromium renderer cannot traverse upward out of the `renderer/` directory via relative `../` paths — the image silently fails to load.
+
+**Rule:** All images referenced from HTML must live **inside** the `renderer/` folder (or a subfolder of it) and be referenced with `./` or a same-directory path. `watchwall.png` is therefore duplicated at `renderer/watchwall.png`. If you add new image assets, copy them into `renderer/` and reference them with `./filename.png`.
+
+The app icon (`watchwallicon.png`) referenced from `main/main.js` using `path.join(__dirname, '../watchwallicon.png')` is fine — that uses Node.js path resolution in the main process, which handles asar correctly.
+
 ### `hasPrimarySlot` vs `placements`
 
 - `hasPrimarySlot: true` → `ensurePrimarySlot()` runs (swaps highlighted box to index 0 on layout switch or highlight change). Only `true` when `n > 1` in sidebar/bottom layouts — at `n=1` both cells are equal size so no swap is needed.
@@ -862,7 +870,7 @@ Event listeners created in `createBox()` reference `box.id` via the live `box` o
 
 | File | Usage |
 |---|---|
-| `watchwall.png` | Wide horizontal banner logo. Used in: bottom bar (`#bottom-bar-logo`, 20 px height) and settings dialog (`#settings-logo`, 88% width). Referenced as `../watchwall.png` from the renderer. |
+| `watchwall.png` | Wide horizontal banner logo. Used in: bottom bar (`#bottom-bar-logo`, 20 px height) and settings dialog (`#settings-logo`, 88% width). A copy lives at `renderer/watchwall.png` and is referenced as `./watchwall.png` from `index.html`. **Do not use `../watchwall.png` — relative upward paths across the asar boundary break in packaged builds.** |
 | `watchwallicon.png` | Square app icon. Used in: `BrowserWindow` constructor (`icon:`) and `app.dock.setIcon()` on macOS. Referenced from main process as `path.join(__dirname, '../watchwallicon.png')`. |
 | `watchwallblack.png` | Not currently used in UI. |
 | `watchwallwhite.png` | Not currently used in UI. |
