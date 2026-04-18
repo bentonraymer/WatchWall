@@ -88,6 +88,31 @@
           </div>
         </div>
 
+        <!-- Menu Bar -->
+        <div class="settings-section-label">Menu Bar</div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <span class="settings-row-label">Position</span>
+            <span class="settings-row-desc">Which edge the menu bar appears on</span>
+          </div>
+          <select id="setting-menu-position" class="menu-select">
+            <option value="bottom">Bottom</option>
+            <option value="top">Top</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <span class="settings-row-label">Always Visible</span>
+            <span class="settings-row-desc">Keep the menu bar pinned on screen</span>
+          </div>
+          <label class="toggle-switch" title="Pin menu bar">
+            <input type="checkbox" id="setting-menu-pinned" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
         <!-- Quick Launch Sites -->
         <div class="settings-section-label">Quick Launch Sites</div>
         <div id="settings-sites-list"><!-- populated by app.js --></div>

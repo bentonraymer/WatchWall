@@ -900,41 +900,33 @@ input[type="color"].settings-color-input:disabled {
   flex: 0 0 auto;
 }
 
-/* ── Bottom Hover Zone ───────────────────────────────────── */
-/* #bottom-trigger: always-on 40px strip that intercepts cursor events even
-   when the cursor is over a webview (sits above at z-index 1000).
-   #window-hover-menu: floats above the trigger, toggled via JS. */
+/* ── Menu Bar Hover Zone ─────────────────────────────────── */
+/* The hover zone is a fixed container that positions the trigger strip and
+   the menu panel.  Position-specific geometry is driven by data-menu-pos on
+   <body>.  The trigger always sits at z-index 1000 so it captures the cursor
+   even when it is over a webview; the menu appears right at the same edge so
+   no gap needs to be crossed.                                              */
+
 #bottom-hover-zone {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   z-index: 1000;
   pointer-events: none;
 }
 
 #bottom-trigger {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
   pointer-events: auto;
 }
 
+/* Shared menu panel styles */
 #window-hover-menu {
   position: absolute;
-  bottom: 0; /* docked to the screen edge — cursor is already on it when menu appears */
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
   background: rgba(18, 18, 18, 0.94);
   border: 1px solid #2e2e2e;
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms;
@@ -944,4 +936,124 @@ input[type="color"].settings-color-input:disabled {
 #window-hover-menu.visible {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* ── BOTTOM (default) ────────────────────────────────────── */
+body[data-menu-pos="bottom"] #bottom-hover-zone {
+  bottom: 0; left: 0; right: 0;
+}
+body[data-menu-pos="bottom"] #bottom-trigger {
+  bottom: 0; left: 0; right: 0; height: 40px;
+}
+body[data-menu-pos="bottom"] #window-hover-menu {
+  bottom: 0; left: 50%; transform: translateX(-50%);
+  flex-direction: row;
+  border-radius: 8px 8px 0 0;
+  border-bottom: none;
+}
+
+/* ── TOP ─────────────────────────────────────────────────── */
+body[data-menu-pos="top"] #bottom-hover-zone {
+  top: 0; left: 0; right: 0;
+}
+body[data-menu-pos="top"] #bottom-trigger {
+  top: 0; left: 0; right: 0; height: 40px;
+}
+body[data-menu-pos="top"] #window-hover-menu {
+  top: 0; left: 50%; transform: translateX(-50%);
+  flex-direction: row;
+  border-radius: 0 0 8px 8px;
+  border-top: none;
+}
+
+/* ── LEFT ────────────────────────────────────────────────── */
+body[data-menu-pos="left"] #bottom-hover-zone {
+  left: 0; top: 0; bottom: 0;
+}
+body[data-menu-pos="left"] #bottom-trigger {
+  left: 0; top: 0; bottom: 0; width: 20px;
+}
+body[data-menu-pos="left"] #window-hover-menu {
+  left: 0; top: 50%; transform: translateY(-50%);
+  flex-direction: column;
+  align-items: stretch;
+  width: 148px;
+  padding: 10px 8px;
+  border-radius: 0 8px 8px 0;
+  border-left: none;
+}
+
+/* ── RIGHT ───────────────────────────────────────────────── */
+body[data-menu-pos="right"] #bottom-hover-zone {
+  right: 0; top: 0; bottom: 0;
+}
+body[data-menu-pos="right"] #bottom-trigger {
+  right: 0; top: 0; bottom: 0; width: 20px;
+}
+body[data-menu-pos="right"] #window-hover-menu {
+  right: 0; top: 50%; transform: translateY(-50%);
+  flex-direction: column;
+  align-items: stretch;
+  width: 148px;
+  padding: 10px 8px;
+  border-radius: 8px 0 0 8px;
+  border-right: none;
+}
+
+/* ── Vertical-mode item overrides (left & right) ─────────── */
+body[data-menu-pos="left"]  #window-hover-menu .menu-separator,
+body[data-menu-pos="right"] #window-hover-menu .menu-separator {
+  width: auto; height: 1px; align-self: stretch; margin: 2px 0;
+}
+
+body[data-menu-pos="left"]  #window-hover-menu .menu-btn,
+body[data-menu-pos="right"] #window-hover-menu .menu-btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+body[data-menu-pos="left"]  #window-hover-menu .menu-select,
+body[data-menu-pos="right"] #window-hover-menu .menu-select {
+  width: 100%;
+  max-width: 100%;
+}
+
+body[data-menu-pos="left"]  #window-hover-menu .menu-label,
+body[data-menu-pos="right"] #window-hover-menu .menu-label {
+  padding: 4px 2px 0;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+body[data-menu-pos="left"]  #bottom-bar-logo,
+body[data-menu-pos="right"] #bottom-bar-logo {
+  width: 100%;
+  height: auto;
+  max-height: 22px;
+  align-self: center;
+}
+
+/* ── Pinned mode ─────────────────────────────────────────── */
+/* Always-visible: CSS keeps the menu shown regardless of the .visible class
+   (body.menu-pinned selector has higher specificity than #window-hover-menu
+   alone).  The trigger's pointer-events are disabled so it doesn't eat clicks
+   from webview content along that edge.                                     */
+body.menu-pinned #window-hover-menu {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.menu-pinned #bottom-trigger {
+  pointer-events: none;
+}
+
+/* Pinned left/right: span the full height so the reserved padding makes sense */
+body.menu-pinned[data-menu-pos="left"]  #window-hover-menu,
+body.menu-pinned[data-menu-pos="right"] #window-hover-menu {
+  top: 0;
+  bottom: 0;
+  transform: none;
+  overflow-y: auto;
+  justify-content: center;
 }

@@ -375,6 +375,8 @@ const prefs = {
   sites: DEFAULT_SITES.map((s) => ({ ...s })),
   highlightColor:   '#3ea6ff',
   highlightEnabled: true,
+  menuPosition: 'bottom',   // 'bottom' | 'top' | 'left' | 'right'
+  menuPinned:   false,      // true = always visible, false = hover to reveal
 };
 
 async function savePrefs() {
@@ -383,6 +385,8 @@ async function savePrefs() {
       sites:            prefs.sites,
       highlightColor:   prefs.highlightColor,
       highlightEnabled: prefs.highlightEnabled,
+      menuPosition:     prefs.menuPosition,
+      menuPinned:       prefs.menuPinned,
     });
   } catch {}
 }
@@ -398,6 +402,45 @@ function applyHighlightStyle() {
 // Apply defaults immediately (before prefs file is loaded) so the first
 // render uses the right color.
 applyHighlightStyle();
+
+// Applies the menu position and pin preference to the DOM.
+// Sets data-menu-pos on <body> (drives all CSS position rules) and the
+// menu-pinned class (drives always-visible override).
+// When pinned, measures the menu's rendered size and adds matching padding
+// to #grid-area so the grid never slides under the menu.
+function applyMenuSettings() {
+  const pos    = prefs.menuPosition || 'bottom';
+  const pinned = !!prefs.menuPinned;
+
+  document.body.dataset.menuPos = pos;
+  document.body.classList.toggle('menu-pinned', pinned);
+
+  // Clear any previously applied padding first.
+  gridArea.style.paddingTop    = '';
+  gridArea.style.paddingBottom = '';
+  gridArea.style.paddingLeft   = '';
+  gridArea.style.paddingRight  = '';
+
+  if (pinned) {
+    // Measure after the browser has applied the pinned styles (next frame).
+    requestAnimationFrame(() => {
+      const menu = document.getElementById('window-hover-menu');
+      const rect = menu.getBoundingClientRect();
+      if      (pos === 'bottom') gridArea.style.paddingBottom = rect.height + 'px';
+      else if (pos === 'top')    gridArea.style.paddingTop    = rect.height + 'px';
+      else if (pos === 'left')   gridArea.style.paddingLeft   = rect.width  + 'px';
+      else if (pos === 'right')  gridArea.style.paddingRight  = rect.width  + 'px';
+      resizeStage();
+    });
+  } else {
+    resizeStage();
+  }
+}
+
+// Apply the position attribute immediately so CSS is correct from first paint.
+// The full applyMenuSettings() (which calls resizeStage and needs state) runs
+// later in DOMContentLoaded once state is initialised.
+document.body.dataset.menuPos = prefs.menuPosition || 'bottom';
 
 // Returns the hostname without "www." for display labels.
 function hostOf(url) {
@@ -433,9 +476,15 @@ const webviewMap = new Map(); // Map<boxId, HTMLWebViewElement>
 const MENU_BAR_HEIGHT = 0; // top bar removed; grid-area fills the full window
 
 function resizeStage() {
-  const def    = LAYOUT_DEFS[state.layout];
-  const availW = gridArea.clientWidth  || window.innerWidth;
-  const availH = gridArea.clientHeight || (window.innerHeight - MENU_BAR_HEIGHT);
+  const def = LAYOUT_DEFS[state.layout];
+  // Subtract any padding reserved for a pinned menu bar so the stage never
+  // slides underneath it.  getComputedStyle reads back whatever was set by
+  // applyMenuSettings() (or 0 when unpinned).
+  const cs     = getComputedStyle(gridArea);
+  const availW = (gridArea.clientWidth  - parseFloat(cs.paddingLeft)  - parseFloat(cs.paddingRight))
+                 || window.innerWidth;
+  const availH = (gridArea.clientHeight - parseFloat(cs.paddingTop)   - parseFloat(cs.paddingBottom))
+                 || (window.innerHeight - MENU_BAR_HEIGHT);
   if (!availW || !availH) return;
 
   if (def.fillArea) {
@@ -965,6 +1014,9 @@ document.addEventListener('DOMContentLoaded', () => {
     windowMenuEl.classList.add('visible');
   }
   function scheduleHideWindowMenu() {
+    // In pinned mode the CSS keeps the menu visible regardless of the class,
+    // but skip the timer to avoid unnecessary DOM churn.
+    if (prefs.menuPinned) return;
     wmHideTimer = setTimeout(() => windowMenuEl.classList.remove('visible'), 120);
   }
 
@@ -1042,6 +1094,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') { e.preventDefault(); addSiteFromInput(); }
   });
 
+  // ── Settings — menu bar position & pin ───────────────────
+  const menuPositionSelect = document.getElementById('setting-menu-position');
+  const menuPinnedInput    = document.getElementById('setting-menu-pinned');
+
+  menuPositionSelect.addEventListener('change', (e) => {
+    prefs.menuPosition = e.target.value;
+    applyMenuSettings();
+    savePrefs();
+  });
+
+  menuPinnedInput.addEventListener('change', (e) => {
+    prefs.menuPinned = e.target.checked;
+    applyMenuSettings();
+    savePrefs();
+  });
+
   // ── URL Popup controls ───────────────────────────────
   const urlInput    = document.getElementById('url-input');
   const urlBackdrop = document.getElementById('url-popup-backdrop');
@@ -1113,14 +1181,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (Array.isArray(data.sites) && data.sites.length > 0) prefs.sites = data.sites;
       if (typeof data.highlightColor   === 'string')  prefs.highlightColor   = data.highlightColor;
       if (typeof data.highlightEnabled === 'boolean') prefs.highlightEnabled = data.highlightEnabled;
+      if (typeof data.menuPosition     === 'string')  prefs.menuPosition     = data.menuPosition;
+      if (typeof data.menuPinned       === 'boolean') prefs.menuPinned       = data.menuPinned;
     }
     // Sync settings UI to loaded values.
-    highlightColorInput.value    = prefs.highlightColor;
-    highlightColorInput.disabled = !prefs.highlightEnabled;
+    highlightColorInput.value     = prefs.highlightColor;
+    highlightColorInput.disabled  = !prefs.highlightEnabled;
     highlightEnabledInput.checked = prefs.highlightEnabled;
+    menuPositionSelect.value      = prefs.menuPosition;
+    menuPinnedInput.checked       = prefs.menuPinned;
     applyHighlightStyle();
+    applyMenuSettings();
     renderSettingsSites();
-  }).catch(() => { applyHighlightStyle(); renderSettingsSites(); });
+  }).catch(() => { applyHighlightStyle(); applyMenuSettings(); renderSettingsSites(); });
 
   // ── Session check — show restore dialog or start fresh ──
   window.api.sessionExists().then((has) => {

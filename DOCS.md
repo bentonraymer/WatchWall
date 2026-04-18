@@ -275,6 +275,8 @@ const prefs = {
   ],
   highlightColor:   '#3ea6ff',       // CSS color string
   highlightEnabled: true,            // if false, highlight border is transparent
+  menuPosition: 'bottom',            // 'bottom' | 'top' | 'left' | 'right'
+  menuPinned:   false,               // true = always visible, false = hover-to-reveal
 };
 ```
 
