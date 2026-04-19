@@ -99,6 +99,25 @@ for (let n = 1; n <= 15; n++) {
   LAYOUT_DEFS[`bottom-${n}`]  = makeBottomDef(n);
 }
 
+// sidebar-1 special case: 3-row grid so the secondary is vertically centred.
+//
+// Geometry (ratio = 8/3):
+//   Rows: 1fr (top pad) | 2fr (content) | 1fr (bottom pad) — total 4fr
+//   Primary   — col 1 (2fr of 3fr = 2W/3), rows 1-3 (full H)   → (2W/3)/H = 16/9 ✓
+//   Secondary — col 2 (1fr of 3fr = W/3),  row 2  (2/4·H = H/2) → (W/3)/(H/2) = 16/9 ✓
+//   Empty     — col 2 rows 1 & 3 (equal 1/4·H pads above and below secondary)
+LAYOUT_DEFS['sidebar-1'] = {
+  label: 'Main + 1 Sidebar',
+  hasPrimarySlot: true,
+  gridTemplateColumns: '2fr 1fr',
+  gridTemplateRows: '1fr 2fr 1fr',
+  ratio: 8 / 3,
+  placements: [
+    { col: '1', row: '1 / span 3' },  // primary: full left column
+    { col: '2', row: '2' },           // secondary: middle-right cell, vertically centred
+  ],
+};
+
 // ── Mixed Grid Layouts ──────────────────────────────────
 // Rows of unequal cell counts; the stage fills the available area (cells
 // are not guaranteed to be exactly 16:9 but the full viewport is used).
@@ -128,10 +147,31 @@ LAYOUT_DEFS['mixed-11'] = makeMixedDef('Mixed Grid 4+4+3', [4, 4, 3]);
 LAYOUT_DEFS['mixed-13'] = makeMixedDef('Mixed Grid 4+5+4', [4, 5, 4]);
 LAYOUT_DEFS['mixed-14'] = makeMixedDef('Mixed Grid 5+5+4', [5, 5, 4]);
 
+// ── 2-box stacked: large primary on top, small secondary on bottom ──────────
+// A 1-column grid can't keep both boxes 16:9 when they have different heights.
+// Solution: 3 columns (1fr 2fr 1fr).  Primary spans all 3 (full width).
+// Secondary occupies only the middle column (half width), making both 16:9.
+//
+// Geometry (ratio = 32/27):
+//   Primary   — cols 1-3 (full W),    row 1 (2H/3 tall) → W/(2H/3) = 3W/2H = 16/9 ✓
+//   Secondary — col 2   (W/2 wide),   row 2 (H/3 tall)  → (W/2)/(H/3) = 3W/2H = 16/9 ✓
+//   Empty cells — col 1 row 2 and col 3 row 2 (W/4 × H/3 each, dark background)
+LAYOUT_DEFS['main-top-1'] = {
+  label: 'Large Top + Small Bottom',
+  hasPrimarySlot: true,
+  gridTemplateColumns: '1fr 2fr 1fr',
+  gridTemplateRows: '2fr 1fr',
+  ratio: 32 / 27,
+  placements: [
+    { col: '1 / span 3', row: '1' },  // primary: full width
+    { col: '2',          row: '2' },  // secondary: center-bottom, 16:9
+  ],
+};
+
 // Layout Picker options per box count.
 const COUNT_LAYOUTS = {
   1:  ['full'],
-  2:  ['equal-2',   'sidebar-1'],
+  2:  ['equal-2',   'sidebar-1', 'main-top-1'],
   3:  ['equal-3',   'sidebar-2',  'bottom-2'],
   4:  ['equal-2x2', 'sidebar-3',  'bottom-3'],
   5:  ['equal-3x2', 'mixed-5',    'sidebar-4',  'bottom-4'],
