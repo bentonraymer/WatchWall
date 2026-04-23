@@ -740,6 +740,11 @@ function createBox(box) {
   btnGoToUrl.textContent = 'Go to URL';
   btnGoToUrl.addEventListener('click', (e) => { e.stopPropagation(); openUrlPopup(box.id); });
 
+  const btnRefresh = document.createElement('button');
+  btnRefresh.classList.add('box-menu-btn');
+  btnRefresh.textContent = 'Refresh';
+  btnRefresh.addEventListener('click', (e) => { e.stopPropagation(); wv.reload(); });
+
   const btnHighlight = document.createElement('button');
   btnHighlight.classList.add('box-menu-btn', 'box-menu-btn--highlight');
   btnHighlight.textContent = box.id === state.highlightedBoxId ? 'Highlighted' : 'Highlight';
@@ -758,7 +763,7 @@ function createBox(box) {
   btnClose.disabled = state.boxes.length <= 1;
   btnClose.addEventListener('click', (e) => { e.stopPropagation(); closeBox(box.id); });
 
-  menu.append(btnGoToUrl, btnHighlight, btnAudio, btnClose);
+  menu.append(btnGoToUrl, btnRefresh, btnHighlight, btnAudio, btnClose);
 
   const overlay = document.createElement('div');
   overlay.classList.add('box-overlay');
@@ -780,6 +785,16 @@ function createBox(box) {
   wrapper.appendChild(overlay);
   wrapper.appendChild(audioIndicator);
   wrapper.appendChild(menu);
+
+  // Scale the 1920×1080 webview down to fit the box's actual pixel dimensions.
+  // ResizeObserver fires once when the wrapper enters the DOM and again
+  // whenever the box is resized (layout change, window resize, etc.).
+  const updateWebviewScale = () => {
+    const s = wrapper.clientWidth / 1920;
+    if (s > 0) wv.style.transform = `scale(${s})`;
+  };
+  new ResizeObserver(updateWebviewScale).observe(wrapper);
+
   return wrapper;
 }
 
