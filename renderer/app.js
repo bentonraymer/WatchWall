@@ -415,6 +415,7 @@ const prefs = {
   sites: DEFAULT_SITES.map((s) => ({ ...s })),
   highlightColor:   '#3ea6ff',
   highlightEnabled: true,
+  bgColor:          '#0f0f0f', // app background + letterbox colour
   menuPosition: 'bottom',   // 'bottom' | 'top' | 'left' | 'right'
   menuPinned:   false,      // true = always visible, false = hover to reveal
   boxGap:           0,     // px gap between grid cells (0–20)
@@ -429,6 +430,7 @@ async function savePrefs() {
       sites:            prefs.sites,
       highlightColor:   prefs.highlightColor,
       highlightEnabled: prefs.highlightEnabled,
+      bgColor:          prefs.bgColor,
       menuPosition:     prefs.menuPosition,
       menuPinned:       prefs.menuPinned,
       boxGap:           prefs.boxGap,
@@ -450,6 +452,13 @@ function applyHighlightStyle() {
 // Apply defaults immediately (before prefs file is loaded) so the first
 // render uses the right color.
 applyHighlightStyle();
+
+const DEFAULT_BG_COLOR = '#0f0f0f';
+
+function applyBgColor() {
+  document.documentElement.style.setProperty('--app-bg', prefs.bgColor || DEFAULT_BG_COLOR);
+}
+applyBgColor();
 
 // Applies box gap and border-radius from prefs to CSS custom properties.
 // Safe to call at any time — only touches :root CSS variables.
@@ -1180,6 +1189,23 @@ document.addEventListener('DOMContentLoaded', () => {
     savePrefs();
   });
 
+  // ── Settings — background color ───────────────────────
+  const bgColorInput = document.getElementById('setting-bg-color');
+  const bgResetBtn   = document.getElementById('setting-bg-reset');
+
+  bgColorInput.addEventListener('input', (e) => {
+    prefs.bgColor = e.target.value;
+    applyBgColor();
+    savePrefs();
+  });
+
+  bgResetBtn.addEventListener('click', () => {
+    prefs.bgColor = DEFAULT_BG_COLOR;
+    bgColorInput.value = DEFAULT_BG_COLOR;
+    applyBgColor();
+    savePrefs();
+  });
+
   // ── Settings — sites management ───────────────────────
   const siteInput  = document.getElementById('settings-site-input');
   const siteAddBtn = document.getElementById('settings-site-add-btn');
@@ -1338,6 +1364,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data) {
       if (Array.isArray(data.sites) && data.sites.length > 0) prefs.sites = data.sites;
       if (typeof data.highlightColor   === 'string')  prefs.highlightColor   = data.highlightColor;
+      if (typeof data.bgColor          === 'string')  prefs.bgColor          = data.bgColor;
       if (typeof data.highlightEnabled === 'boolean') prefs.highlightEnabled = data.highlightEnabled;
       if (typeof data.menuPosition     === 'string')  prefs.menuPosition = data.menuPosition;
       if (typeof data.menuPinned       === 'boolean') prefs.menuPinned   = data.menuPinned;
@@ -1351,6 +1378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     highlightColorInput.value     = prefs.highlightColor;
     highlightColorInput.disabled  = !prefs.highlightEnabled;
     highlightEnabledInput.checked = prefs.highlightEnabled;
+    bgColorInput.value            = prefs.bgColor;
     menuPositionSelect.value      = prefs.menuPosition;
     menuPinnedInput.checked       = prefs.menuPinned;
     boxGapRange.value             = prefs.boxGap;
@@ -1361,10 +1389,11 @@ document.addEventListener('DOMContentLoaded', () => {
     boxZoomRange.value            = zoomValueToIndex(prefs.boxViewportWidth);
     boxZoomLabel.textContent      = zoomLabelText(prefs.boxViewportWidth);
     applyHighlightStyle();
+    applyBgColor();
     applyBoxStyles();
     applyMenuSettings();
     renderSettingsSites();
-  }).catch(() => { applyHighlightStyle(); applyBoxStyles(); applyMenuSettings(); renderSettingsSites(); });
+  }).catch(() => { applyHighlightStyle(); applyBgColor(); applyBoxStyles(); applyMenuSettings(); renderSettingsSites(); });
 
   // ── Session check — show restore dialog or start fresh ──
   window.api.sessionExists().then((has) => {

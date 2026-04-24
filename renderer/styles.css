@@ -1,6 +1,7 @@
 /* ── CSS Custom Properties ───────────────────────────────── */
 :root {
   --highlight-color: #3ea6ff; /* updated by JS when the user changes the setting */
+  --app-bg:         #0f0f0f; /* app background + letterbox colour; updated by applyBgColor() */
   --box-gap:       0px;       /* gap between grid cells; updated by applyBoxStyles() */
   --box-outer-gap: 0px;       /* padding around the outer edge of the grid; same value when enabled */
   --box-corner-pct: 0;        /* unitless 0–50; border-radius computed below to stay circular on 16:9 */
@@ -17,7 +18,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0f0f0f;
+  background: var(--app-bg);
   color: #e8e8e8;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 13px;
@@ -119,7 +120,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f0f0f;
+  background: var(--app-bg);
 }
 
 /* Grid stage — sized in pixels by JS to the largest 16:9-correct
@@ -720,6 +721,23 @@ body {
   width: 44px;           /* fixed — wide enough for "1920px", prevents layout shift */
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Small inline reset button used next to colour pickers */
+.settings-reset-btn {
+  font-size: 11px;
+  color: #555;
+  background: none;
+  border: 1px solid #2e2e2e;
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color 100ms, border-color 100ms;
+  white-space: nowrap;
+}
+.settings-reset-btn:hover {
+  color: #aaa;
+  border-color: #555;
 }
 
 /* Highlight settings row — toggle + color swatch side by side */
