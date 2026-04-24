@@ -417,8 +417,9 @@ const prefs = {
   highlightEnabled: true,
   menuPosition: 'bottom',   // 'bottom' | 'top' | 'left' | 'right'
   menuPinned:   false,      // true = always visible, false = hover to reveal
-  boxGap:           0,    // px gap between grid cells (0–20)
-  boxCornerRadius:  0,    // % border-radius on each box (0–20)
+  boxGap:           0,     // px gap between grid cells (0–20)
+  boxOuterGap:      false, // true = extend box gap to the outer grid edges
+  boxCornerRadius:  0,     // % border-radius on each box (0–20)
   boxViewportWidth: 1920, // virtual px width webviews render at; 0 = auto (fills box)
 };
 
@@ -431,6 +432,7 @@ async function savePrefs() {
       menuPosition:     prefs.menuPosition,
       menuPinned:       prefs.menuPinned,
       boxGap:           prefs.boxGap,
+      boxOuterGap:      prefs.boxOuterGap,
       boxCornerRadius:  prefs.boxCornerRadius,
       boxViewportWidth: prefs.boxViewportWidth,
     });
@@ -452,9 +454,11 @@ applyHighlightStyle();
 // Applies box gap and border-radius from prefs to CSS custom properties.
 // Safe to call at any time — only touches :root CSS variables.
 function applyBoxStyles() {
-  const gap    = Number.isFinite(prefs.boxGap)          ? Math.max(0, Math.min(20, prefs.boxGap))         : 0;
-  const radius = Number.isFinite(prefs.boxCornerRadius) ? Math.max(0, Math.min(20, prefs.boxCornerRadius)) : 0;
+  const gap      = Number.isFinite(prefs.boxGap)          ? Math.max(0, Math.min(20, prefs.boxGap))         : 0;
+  const radius   = Number.isFinite(prefs.boxCornerRadius) ? Math.max(0, Math.min(20, prefs.boxCornerRadius)) : 0;
+  const outerGap = prefs.boxOuterGap ? gap + 'px' : '0px';
   document.documentElement.style.setProperty('--box-gap',        gap + 'px');
+  document.documentElement.style.setProperty('--box-outer-gap',  outerGap);
   document.documentElement.style.setProperty('--box-corner-pct', radius);
 }
 
@@ -554,21 +558,31 @@ function resizeStage() {
                  || (window.innerHeight - MENU_BAR_HEIGHT);
   if (!availW || !availH) return;
 
+  // Outer-gap padding lives inside #grid-stage (box-sizing: border-box), so
+  // it reduces the space available to the grid cells.  Read directly from prefs
+  // (same source of truth as the CSS variable) to avoid any computed-style
+  // timing issues.  Padding is added back to get the total stage size.
+  const outerGapPx = prefs.boxOuterGap ? Math.max(0, Math.min(20, prefs.boxGap)) : 0;
+  const padW = outerGapPx * 2;
+  const padH = outerGapPx * 2;
+
   if (def.fillArea) {
     // Mixed grids fill the entire available area; cells won't all be 16:9
     // but the full viewport is used.
     gridStage.style.width  = `${availW}px`;
     gridStage.style.height = `${availH}px`;
   } else {
-    // Letterbox: fit the largest rectangle with the layout's aspect ratio.
-    // Every equal-grid and Main+N layout goes through this path, leaving
-    // unused space rather than distorting any cell.
+    // Letterbox: fit the largest rectangle with the layout's aspect ratio
+    // inside the effective content area (available space minus padding), then
+    // add the padding back so the stage dimensions include it.
     const { ratio } = def;
-    let w, h;
-    if (availW / availH >= ratio) { h = availH; w = h * ratio; }
-    else                          { w = availW; h = w / ratio; }
-    gridStage.style.width  = `${Math.floor(w)}px`;
-    gridStage.style.height = `${Math.floor(h)}px`;
+    const effW = availW - padW;
+    const effH = availH - padH;
+    let cW, cH;
+    if (effW / effH >= ratio) { cH = effH; cW = cH * ratio; }
+    else                      { cW = effW; cH = cW / ratio; }
+    gridStage.style.width  = `${Math.floor(cW + padW)}px`;
+    gridStage.style.height = `${Math.floor(cH + padH)}px`;
   }
 }
 
@@ -1212,6 +1226,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Settings — box appearance ─────────────────────────
   const boxGapRange       = document.getElementById('setting-box-gap');
   const boxGapLabel       = document.getElementById('setting-box-gap-label');
+  const boxOuterGapCb     = document.getElementById('setting-box-outer-gap');
   const boxRadiusRange    = document.getElementById('setting-box-rounded');
   const boxRadiusLabel    = document.getElementById('setting-box-rounded-label');
   const boxZoomRange      = document.getElementById('setting-box-zoom');
@@ -1228,6 +1243,14 @@ document.addEventListener('DOMContentLoaded', () => {
     prefs.boxGap = Number(e.target.value);
     boxGapLabel.textContent = prefs.boxGap + 'px';
     applyBoxStyles();
+    resizeStage();
+    savePrefs();
+  });
+
+  boxOuterGapCb.addEventListener('change', (e) => {
+    prefs.boxOuterGap = e.target.checked;
+    applyBoxStyles();
+    resizeStage();
     savePrefs();
   });
 
@@ -1319,6 +1342,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof data.menuPosition     === 'string')  prefs.menuPosition = data.menuPosition;
       if (typeof data.menuPinned       === 'boolean') prefs.menuPinned   = data.menuPinned;
       if (typeof data.boxGap           === 'number')  prefs.boxGap           = data.boxGap;
+      if (typeof data.boxOuterGap      === 'boolean') prefs.boxOuterGap      = data.boxOuterGap;
       if (typeof data.boxCornerRadius  === 'number')  prefs.boxCornerRadius  = data.boxCornerRadius;
       else if (data.boxRounded === true)              prefs.boxCornerRadius  = 8; // migrate old toggle
       if (typeof data.boxViewportWidth === 'number')  prefs.boxViewportWidth = data.boxViewportWidth;
@@ -1331,6 +1355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     menuPinnedInput.checked       = prefs.menuPinned;
     boxGapRange.value             = prefs.boxGap;
     boxGapLabel.textContent       = prefs.boxGap + 'px';
+    boxOuterGapCb.checked         = prefs.boxOuterGap;
     boxRadiusRange.value          = prefs.boxCornerRadius;
     boxRadiusLabel.textContent    = prefs.boxCornerRadius + '%';
     boxZoomRange.value            = zoomValueToIndex(prefs.boxViewportWidth);

@@ -1,7 +1,8 @@
 /* ── CSS Custom Properties ───────────────────────────────── */
 :root {
   --highlight-color: #3ea6ff; /* updated by JS when the user changes the setting */
-  --box-gap:    0px;          /* gap between grid cells; updated by applyBoxStyles() */
+  --box-gap:       0px;       /* gap between grid cells; updated by applyBoxStyles() */
+  --box-outer-gap: 0px;       /* padding around the outer edge of the grid; same value when enabled */
   --box-corner-pct: 0;        /* unitless 0–50; border-radius computed below to stay circular on 16:9 */
 }
 
@@ -127,6 +128,7 @@ body {
   display: grid;
   flex: 0 0 auto;
   gap: var(--box-gap);
+  padding: var(--box-outer-gap);
   /* gridTemplateColumns / gridTemplateRows set by app.js */
 }
 
