@@ -919,8 +919,14 @@ input[type="color"].settings-color-input:disabled {
 /* ── Box Number Overlay ──────────────────────────────────── */
 .box-overlay {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  /* Shift inward so the badge clears the rounded corner at any radius.
+     r (px) = --box-corner-pct × 1% × box-height (vertical radius).
+     Safe inset = r × (1 − 1/√2) ≈ 0.293r.
+     top  uses % of height → 0.293 × P% → we use 0.35% for a small margin.
+     left uses % of width  → same px ÷ width = 0.293 × P% × (9/16) → 0.20%.
+     max() keeps the baseline 8px when corner-pct is 0.           */
+  top:  max(8px, calc(var(--box-corner-pct) * 0.35%));
+  left: max(8px, calc(var(--box-corner-pct) * 0.20%));
   z-index: 20; /* above click-guard (10), below hover menu (30) */
   background: rgba(0, 0, 0, 0.62);
   color: #fff;
@@ -945,8 +951,8 @@ input[type="color"].settings-color-input:disabled {
 /* Speaker badge, top-right corner; only visible when override is active. */
 .box-audio-indicator {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top:   max(8px, calc(var(--box-corner-pct) * 0.35%));
+  right: max(8px, calc(var(--box-corner-pct) * 0.20%));
   z-index: 20; /* same level as box-overlay, above click-guard (10) */
   background: rgba(0, 0, 0, 0.62);
   color: #3ea6ff;

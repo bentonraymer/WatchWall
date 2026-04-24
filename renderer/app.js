@@ -581,17 +581,47 @@ function resizeStage() {
     gridStage.style.width  = `${availW}px`;
     gridStage.style.height = `${availH}px`;
   } else {
-    // Letterbox: fit the largest rectangle with the layout's aspect ratio
-    // inside the effective content area (available space minus padding), then
-    // add the padding back so the stage dimensions include it.
-    const { ratio } = def;
+    const gap      = Math.max(0, Math.min(20, prefs.boxGap));
+    const colParts = (def.gridTemplateColumns || '1fr').trim().split(/\s+/);
+    const rowParts = (def.gridTemplateRows    || '1fr').trim().split(/\s+/);
+    const cols     = colParts.length;
+    const rows     = rowParts.length;
+    const gapH     = (cols - 1) * gap;   // total px consumed by column gaps
+    const gapV     = (rows - 1) * gap;   // total px consumed by row gaps
+
+    // Effective area available to cell content (excludes outer padding).
     const effW = availW - padW;
     const effH = availH - padH;
-    let cW, cH;
-    if (effW / effH >= ratio) { cH = effH; cW = cH * ratio; }
-    else                      { cW = effW; cH = cW / ratio; }
-    gridStage.style.width  = `${Math.floor(cW + padW)}px`;
-    gridStage.style.height = `${Math.floor(cH + padH)}px`;
+
+    const isEqualGrid = [...colParts, ...rowParts].every(v => v === '1fr');
+    let Wc, Hc;
+
+    if (isEqualGrid) {
+      // Equal grids: every cell must be exactly 16k × 9k pixels (perfect 16:9
+      // with zero rounding error).  Find the largest integer k such that all
+      // cells plus their gaps still fit inside the available area, then size
+      // the stage to exactly that.  The gap is unchanged; the stage letterboxes
+      // by at most 15 px horizontally and 8 px vertically — imperceptible.
+      const k = Math.max(1, Math.min(
+        Math.floor((effW - gapH) / (16 * cols)),
+        Math.floor((effH - gapV) / (9  * rows))
+      ));
+      Wc = 16 * cols * k + gapH;
+      Hc = 9  * rows * k + gapV;
+    } else {
+      // Non-equal grids (sidebar, main-top…): use the layout's declared ratio.
+      // The ratio is defined over the net cell area:
+      //   ratio = (Wc − gapH) / (Hc − gapV)
+      // so we solve for the largest (Wc, Hc) pair that fits effW × effH.
+      const { ratio } = def;
+      const Hc_byH = effH;
+      const Hc_byW = (effW - gapH) / ratio + gapV;
+      Hc = Math.min(Hc_byH, Hc_byW);
+      Wc = ratio * (Hc - gapV) + gapH;
+    }
+
+    gridStage.style.width  = `${Math.floor(Wc + padW)}px`;
+    gridStage.style.height = `${Math.floor(Hc + padH)}px`;
   }
 }
 
@@ -731,9 +761,29 @@ const FULLSCREEN_OVERRIDE = `(function() {
   Element.prototype.requestFullscreen       = function() { enter(this); return Promise.resolve(); };
   Element.prototype.webkitRequestFullscreen = function() { enter(this); };
   Element.prototype.mozRequestFullScreen    = function() { enter(this); };
+
+  // Save native exit methods BEFORE overwriting them so the host-side
+  // enter-html-full-screen safety-net can call the real ones to cancel any
+  // fullscreen that slipped through the JS patches.
+  var _nativeExit       = document.exitFullscreen        ? document.exitFullscreen.bind(document)        : null;
+  var _nativeWebkitExit = document.webkitExitFullscreen  ? document.webkitExitFullscreen.bind(document)  : null;
+  window.__mvExitNativeFullscreen = function() {
+    try { if (_nativeExit)       _nativeExit();       } catch(e) {}
+    try { if (_nativeWebkitExit) _nativeWebkitExit(); } catch(e) {}
+  };
+
   document.exitFullscreen       = function() { exit(); return Promise.resolve(); };
   document.webkitExitFullscreen = function() { exit(); };
   document.mozCancelFullScreen  = function() { exit(); };
+
+  // macOS WebKit exposes HTMLVideoElement.webkitEnterFullscreen, a separate
+  // code path that bypasses Element.prototype.requestFullscreen entirely and
+  // goes straight to OS-level fullscreen. Patch it here so YouTube's fallback
+  // path is also intercepted.
+  if (typeof HTMLVideoElement !== 'undefined') {
+    HTMLVideoElement.prototype.webkitEnterFullscreen = function() { enter(this); };
+    HTMLVideoElement.prototype.webkitExitFullscreen  = function() { exit(); };
+  }
 
   for (const p of ['fullscreenEnabled','webkitFullscreenEnabled'])
     Object.defineProperty(document, p, { get: () => true, configurable: true });
@@ -753,6 +803,16 @@ function createBox(box) {
   wv.addEventListener('dom-ready', () => {
     wv.executeJavaScript(FULLSCREEN_OVERRIDE).catch(() => {});
     wv.setAudioMuted(box.id !== state.highlightedBoxId && !box.audioOverride);
+  });
+
+  // Safety net for macOS: if any fullscreen request bypasses the JS patches
+  // (e.g. HTMLVideoElement.webkitEnterFullscreen before dom-ready fires, or
+  // an unpatched code path), cancel it immediately from the host side by
+  // invoking the native exit methods we saved inside the injected script.
+  wv.addEventListener('enter-html-full-screen', () => {
+    wv.executeJavaScript(
+      'window.__mvExitNativeFullscreen && window.__mvExitNativeFullscreen();'
+    ).catch(() => {});
   });
 
   // Debounced URL autosave on every navigation (full-page and SPA).
