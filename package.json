@@ -1,6 +1,6 @@
 {
   "name": "WatchWall",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Watch multiple web views simultaneously in a structured grid layout",
   "author": {
     "name": "Benton Raymer",
