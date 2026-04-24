@@ -988,6 +988,7 @@ function addBox(url) {
   updateLayoutPicker();
   updateAddBoxButton();
   applyHighlight();
+  applyMuteStates();
   saveSession();
 }
 
@@ -1014,25 +1015,29 @@ function highlightBox(id) {
 
 // ── Renumber Boxes ────────────────────────────────────────
 // After any box removal, compact ids to 1..n so hotkeys, overlay badges,
-// and session data stay consistent.  All DOM attributes and the webviewMap
-// are updated in a single pass before any box.id value is mutated, so
-// querySelector lookups (which use the old id) still work during the pass.
+// and session data stay consistent.
+//
+// Two-pass DOM update: when state.boxes is reordered (e.g. primary-slot swap),
+// oldIds can be non-sequential.  A single-pass rename of data-box-id would
+// create temporary duplicates that cause later querySelector calls to find the
+// wrong element.  Pass 1 tags every element with data-box-next-id (without
+// touching data-box-id), so every querySelector still hits the right node.
+// Pass 2 commits all the new ids at once.
 function renumberBoxes() {
-  // Snapshot old ids in order so we can look up DOM nodes by their current id.
   const oldIds = state.boxes.map((b) => b.id);
 
   // Update highlighted reference using the new sequential position.
   const highlightIdx = state.boxes.findIndex((b) => b.id === state.highlightedBoxId);
   if (highlightIdx !== -1) state.highlightedBoxId = highlightIdx + 1;
 
-  // Rebuild webviewMap and patch every DOM node that carries an id.
+  // Pass 1: tag each element and rebuild webviewMap; do NOT change data-box-id yet.
   const newWebviewMap = new Map();
   oldIds.forEach((oldId, i) => {
     const newId = i + 1;
 
     const el = gridStage.querySelector(`.box[data-box-id="${oldId}"]`);
     if (el) {
-      el.dataset.boxId = String(newId);
+      el.dataset.boxNextId = String(newId);          // stage the new id
       const overlay  = el.querySelector('.box-overlay');
       if (overlay)  overlay.textContent = String(newId);
       const audioBtn = el.querySelector('.box-menu-btn--audio');
@@ -1042,9 +1047,15 @@ function renumberBoxes() {
     const wv = webviewMap.get(oldId);
     if (wv) newWebviewMap.set(newId, wv);
 
-    // Mutate state object last — closures in createBox() reference the same
-    // object, so they will automatically use the updated id going forward.
+    // Mutate state object — closures in createBox() reference the same
+    // object, so they automatically see the updated id going forward.
     state.boxes[i].id = newId;
+  });
+
+  // Pass 2: commit staged ids now that all elements have been tagged.
+  gridStage.querySelectorAll('.box[data-box-next-id]').forEach((el) => {
+    el.dataset.boxId = el.dataset.boxNextId;
+    delete el.dataset.boxNextId;
   });
 
   webviewMap.clear();
