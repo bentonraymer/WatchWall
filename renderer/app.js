@@ -831,13 +831,15 @@ function createBox(box) {
   menu.classList.add('box-menu');
 
   const btnGoToUrl = document.createElement('button');
-  btnGoToUrl.classList.add('box-menu-btn');
-  btnGoToUrl.textContent = 'Go to URL';
+  btnGoToUrl.classList.add('box-menu-btn', 'box-menu-btn--icon');
+  btnGoToUrl.title = 'Go to URL';
+  btnGoToUrl.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.5 4H4A2.5 2.5 0 0 0 4 9H5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M7.5 4H9A2.5 2.5 0 0 1 9 9H7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 6.5H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
   btnGoToUrl.addEventListener('click', (e) => { e.stopPropagation(); openUrlPopup(box.id); });
 
   const btnRefresh = document.createElement('button');
-  btnRefresh.classList.add('box-menu-btn');
-  btnRefresh.textContent = 'Refresh';
+  btnRefresh.classList.add('box-menu-btn', 'box-menu-btn--icon');
+  btnRefresh.title = 'Refresh';
+  btnRefresh.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
   btnRefresh.addEventListener('click', (e) => { e.stopPropagation(); wv.reload(); });
 
   const btnHighlight = document.createElement('button');
@@ -853,8 +855,9 @@ function createBox(box) {
   btnAudio.addEventListener('click', (e) => { e.stopPropagation(); toggleAudioOverride(box.id); });
 
   const btnClose = document.createElement('button');
-  btnClose.classList.add('box-menu-btn', 'box-menu-btn--close');
-  btnClose.textContent = 'Close';
+  btnClose.classList.add('box-menu-btn', 'box-menu-btn--close', 'box-menu-btn--icon');
+  btnClose.title = 'Close';
+  btnClose.innerHTML = `<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1l9 9M10 1L1 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
   btnClose.disabled = state.boxes.length <= 1;
   btnClose.addEventListener('click', (e) => { e.stopPropagation(); closeBox(box.id); });
 

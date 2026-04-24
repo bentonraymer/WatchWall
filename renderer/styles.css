@@ -1020,6 +1020,14 @@ input[type="color"].settings-color-input:disabled {
   cursor: not-allowed;
 }
 
+.box-menu-btn--icon {
+  padding: 4px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
 .box-menu-btn--close {
   color: #ff7070;
   border-color: rgba(255, 100, 100, 0.2);
