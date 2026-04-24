@@ -417,8 +417,9 @@ const prefs = {
   highlightEnabled: true,
   menuPosition: 'bottom',   // 'bottom' | 'top' | 'left' | 'right'
   menuPinned:   false,      // true = always visible, false = hover to reveal
-  boxGap:       0,          // px gap between grid cells (0–20)
-  boxRounded:   false,      // true = 8px border-radius on each box
+  boxGap:           0,    // px gap between grid cells (0–20)
+  boxCornerRadius:  0,    // % border-radius on each box (0–20)
+  boxViewportWidth: 1920, // virtual px width webviews render at; 0 = auto (fills box)
 };
 
 async function savePrefs() {
@@ -430,7 +431,8 @@ async function savePrefs() {
       menuPosition:     prefs.menuPosition,
       menuPinned:       prefs.menuPinned,
       boxGap:           prefs.boxGap,
-      boxRounded:       prefs.boxRounded,
+      boxCornerRadius:  prefs.boxCornerRadius,
+      boxViewportWidth: prefs.boxViewportWidth,
     });
   } catch {}
 }
@@ -450,10 +452,10 @@ applyHighlightStyle();
 // Applies box gap and border-radius from prefs to CSS custom properties.
 // Safe to call at any time — only touches :root CSS variables.
 function applyBoxStyles() {
-  const gap    = Number.isFinite(prefs.boxGap) ? Math.max(0, Math.min(20, prefs.boxGap)) : 0;
-  const radius = prefs.boxRounded ? '8px' : '0px';
-  document.documentElement.style.setProperty('--box-gap',    gap + 'px');
-  document.documentElement.style.setProperty('--box-radius', radius);
+  const gap    = Number.isFinite(prefs.boxGap)          ? Math.max(0, Math.min(20, prefs.boxGap))         : 0;
+  const radius = Number.isFinite(prefs.boxCornerRadius) ? Math.max(0, Math.min(20, prefs.boxCornerRadius)) : 0;
+  document.documentElement.style.setProperty('--box-gap',        gap + 'px');
+  document.documentElement.style.setProperty('--box-corner-pct', radius);
 }
 
 applyBoxStyles();
@@ -526,6 +528,16 @@ const state = {
 // Webview DOM nodes keyed by box ID — stored separately from state
 // so they can be reparented without being destroyed.
 const webviewMap = new Map(); // Map<boxId, HTMLWebViewElement>
+
+// Holds the updateWebviewScale closure for every live box.
+// Called all at once when prefs.boxViewportWidth changes so every webview
+// immediately re-renders at the new virtual viewport size.
+const webviewScaleUpdaters = new Set();
+
+// Predetermined viewport width notches for the settings slider.
+// Index 0 = Auto (webview fills box); higher indices = fixed virtual widths.
+// The slider min/max matches the index range (0–6).
+const VIEWPORT_NOTCHES = [0, 480, 768, 1024, 1280, 1440, 1920];
 
 // ── Stage Sizing ──────────────────────────────────────────
 const MENU_BAR_HEIGHT = 0; // top bar removed; grid-area fills the full window
@@ -786,13 +798,27 @@ function createBox(box) {
   wrapper.appendChild(audioIndicator);
   wrapper.appendChild(menu);
 
-  // Scale the 1920×1080 webview down to fit the box's actual pixel dimensions.
-  // ResizeObserver fires once when the wrapper enters the DOM and again
-  // whenever the box is resized (layout change, window resize, etc.).
+  // Scale the webview to match prefs.boxViewportWidth.
+  //   > 0  → fixed virtual viewport (e.g. 1920 px); scale down to fit the box
+  //   === 0 → Auto: webview fills the box exactly (no scaling; site sees the
+  //            real box dimensions, may render mobile/compact layouts)
+  // ResizeObserver fires once on mount and again on every box resize.
   const updateWebviewScale = () => {
-    const s = wrapper.clientWidth / 1920;
-    if (s > 0) wv.style.transform = `scale(${s})`;
+    const vw = prefs.boxViewportWidth;
+    if (vw > 0) {
+      const vh = Math.round(vw * 9 / 16);
+      const s  = wrapper.clientWidth / vw;
+      wv.style.width     = vw + 'px';
+      wv.style.height    = vh + 'px';
+      wv.style.transform = s > 0 ? `scale(${s})` : '';
+    } else {
+      wv.style.width     = '100%';
+      wv.style.height    = '100%';
+      wv.style.transform = '';
+    }
   };
+  webviewScaleUpdaters.add(updateWebviewScale);
+  wrapper._scaleUpdater = updateWebviewScale; // stored for cleanup in closeBox
   new ResizeObserver(updateWebviewScale).observe(wrapper);
 
   return wrapper;
@@ -975,7 +1001,10 @@ function closeBox(id) {
   webviewMap.delete(id);
 
   const el = gridStage.querySelector(`.box[data-box-id="${id}"]`);
-  if (el) el.remove();
+  if (el) {
+    if (el._scaleUpdater) webviewScaleUpdaters.delete(el._scaleUpdater);
+    el.remove();
+  }
 
   // Compact remaining ids to 1..n (updates DOM, webviewMap, and state).
   renumberBoxes();
@@ -1181,9 +1210,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── Settings — box appearance ─────────────────────────
-  const boxGapRange  = document.getElementById('setting-box-gap');
-  const boxGapLabel  = document.getElementById('setting-box-gap-label');
-  const boxRoundedCb = document.getElementById('setting-box-rounded');
+  const boxGapRange       = document.getElementById('setting-box-gap');
+  const boxGapLabel       = document.getElementById('setting-box-gap-label');
+  const boxRadiusRange    = document.getElementById('setting-box-rounded');
+  const boxRadiusLabel    = document.getElementById('setting-box-rounded-label');
+  const boxZoomRange      = document.getElementById('setting-box-zoom');
+  const boxZoomLabel      = document.getElementById('setting-box-zoom-label');
+
+  function zoomLabelText(v) { return v === 0 ? 'Auto' : v + 'px'; }
+  // Convert a stored pixel value back to the nearest slider index.
+  function zoomValueToIndex(v) {
+    const idx = VIEWPORT_NOTCHES.indexOf(v);
+    return idx >= 0 ? idx : VIEWPORT_NOTCHES.length - 1;
+  }
 
   boxGapRange.addEventListener('input', (e) => {
     prefs.boxGap = Number(e.target.value);
@@ -1192,9 +1231,17 @@ document.addEventListener('DOMContentLoaded', () => {
     savePrefs();
   });
 
-  boxRoundedCb.addEventListener('change', (e) => {
-    prefs.boxRounded = e.target.checked;
+  boxRadiusRange.addEventListener('input', (e) => {
+    prefs.boxCornerRadius = Number(e.target.value);
+    boxRadiusLabel.textContent = prefs.boxCornerRadius + '%';
     applyBoxStyles();
+    savePrefs();
+  });
+
+  boxZoomRange.addEventListener('input', (e) => {
+    prefs.boxViewportWidth = VIEWPORT_NOTCHES[Number(e.target.value)];
+    boxZoomLabel.textContent = zoomLabelText(prefs.boxViewportWidth);
+    webviewScaleUpdaters.forEach((fn) => fn());
     savePrefs();
   });
 
@@ -1271,8 +1318,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof data.highlightEnabled === 'boolean') prefs.highlightEnabled = data.highlightEnabled;
       if (typeof data.menuPosition     === 'string')  prefs.menuPosition = data.menuPosition;
       if (typeof data.menuPinned       === 'boolean') prefs.menuPinned   = data.menuPinned;
-      if (typeof data.boxGap           === 'number')  prefs.boxGap       = data.boxGap;
-      if (typeof data.boxRounded       === 'boolean') prefs.boxRounded   = data.boxRounded;
+      if (typeof data.boxGap           === 'number')  prefs.boxGap           = data.boxGap;
+      if (typeof data.boxCornerRadius  === 'number')  prefs.boxCornerRadius  = data.boxCornerRadius;
+      else if (data.boxRounded === true)              prefs.boxCornerRadius  = 8; // migrate old toggle
+      if (typeof data.boxViewportWidth === 'number')  prefs.boxViewportWidth = data.boxViewportWidth;
     }
     // Sync settings UI to loaded values.
     highlightColorInput.value     = prefs.highlightColor;
@@ -1282,7 +1331,10 @@ document.addEventListener('DOMContentLoaded', () => {
     menuPinnedInput.checked       = prefs.menuPinned;
     boxGapRange.value             = prefs.boxGap;
     boxGapLabel.textContent       = prefs.boxGap + 'px';
-    boxRoundedCb.checked          = prefs.boxRounded;
+    boxRadiusRange.value          = prefs.boxCornerRadius;
+    boxRadiusLabel.textContent    = prefs.boxCornerRadius + '%';
+    boxZoomRange.value            = zoomValueToIndex(prefs.boxViewportWidth);
+    boxZoomLabel.textContent      = zoomLabelText(prefs.boxViewportWidth);
     applyHighlightStyle();
     applyBoxStyles();
     applyMenuSettings();

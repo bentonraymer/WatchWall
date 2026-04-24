@@ -2,7 +2,7 @@
 :root {
   --highlight-color: #3ea6ff; /* updated by JS when the user changes the setting */
   --box-gap:    0px;          /* gap between grid cells; updated by applyBoxStyles() */
-  --box-radius: 0px;          /* border-radius on each box; updated by applyBoxStyles() */
+  --box-corner-pct: 0;        /* unitless 0–50; border-radius computed below to stay circular on 16:9 */
 }
 
 /* ── Reset & Base ───────────────────────────────────────── */
@@ -135,7 +135,13 @@ body {
   position: relative;
   overflow: hidden;
   background: #000;
-  border-radius: var(--box-radius);
+  /* Circular corners on a 16:9 box.
+     border-radius: H / V  (horizontal / vertical per-corner radii)
+     We want both axes to resolve to the same pixel length, using N% of height as the target:
+       vertical   = N% of height           → calc(var(--box-corner-pct) * 1%)
+       horizontal = same px as % of width  → px = N% * height = N% * width * (9/16)
+                  → as % of width          = N% * (9/16) = N * 0.5625%             */
+  border-radius: calc(var(--box-corner-pct) * 0.5625%) / calc(var(--box-corner-pct) * 1%);
   /* 1px border between boxes for visual separation */
   outline: 1px solid #1e1e1e;
   outline-offset: -1px;
@@ -154,10 +160,10 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 1920px;
-  height: 1080px;
   transform-origin: top left;
   border: none;
+  /* Width, height, and transform are set dynamically by JS based on the
+     Viewport Width preference (prefs.boxViewportWidth).                */
 }
 
 /* ── Click Guard ─────────────────────────────────────────── */
@@ -612,6 +618,56 @@ body {
   background: #274e80;
 }
 
+/* ── Advanced Settings fold-down ─────────────────────────────── */
+#settings-advanced {
+  border-top: 1px solid #1e1e1e;
+  margin-top: 4px;
+}
+
+/* Hide the native disclosure triangle */
+#settings-advanced > summary {
+  list-style: none;
+}
+#settings-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+#settings-advanced-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px 12px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #484848;
+  user-select: none;
+  transition: color 100ms;
+}
+
+#settings-advanced-summary:hover {
+  color: #777;
+}
+
+/* Chevron arrow */
+#settings-advanced-summary::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 180ms ease;
+  flex-shrink: 0;
+}
+
+#settings-advanced[open] > #settings-advanced-summary::after {
+  transform: rotate(45deg);
+}
+
 /* Gap settings row — range slider + numeric readout */
 .settings-gap-controls {
   display: flex;
@@ -623,15 +679,20 @@ body {
 .settings-range {
   -webkit-appearance: none;
   width: 90px;
+  height: 20px;          /* tall enough to contain the thumb without clipping */
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+}
+
+.settings-range::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
   background: #333;
-  outline: none;
-  cursor: pointer;
   transition: background 100ms;
 }
 
-.settings-range:hover {
+.settings-range:hover::-webkit-slider-runnable-track {
   background: #444;
 }
 
@@ -642,6 +703,7 @@ body {
   border-radius: 50%;
   background: #3ea6ff;
   cursor: pointer;
+  margin-top: -5px;      /* centres thumb on the 4px track: -(14-4)/2 */
   transition: background 100ms, transform 100ms;
 }
 
@@ -653,7 +715,7 @@ body {
 .settings-range-label {
   font-size: 11px;
   color: #888;
-  min-width: 28px;
+  width: 44px;           /* fixed — wide enough for "1920px", prevents layout shift */
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

@@ -113,30 +113,6 @@
           </label>
         </div>
 
-        <!-- Box Appearance -->
-        <div class="settings-section-label">Box Appearance</div>
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <span class="settings-row-label">Gap Between Boxes</span>
-            <span class="settings-row-desc">Space between each box in the grid</span>
-          </div>
-          <div class="settings-gap-controls">
-            <input type="range" id="setting-box-gap" class="settings-range"
-                   min="0" max="20" value="0" step="1" />
-            <span id="setting-box-gap-label" class="settings-range-label">0px</span>
-          </div>
-        </div>
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <span class="settings-row-label">Rounded Corners</span>
-            <span class="settings-row-desc">Round the corners of each box</span>
-          </div>
-          <label class="toggle-switch" title="Toggle rounded corners">
-            <input type="checkbox" id="setting-box-rounded" />
-            <span class="toggle-track"></span>
-          </label>
-        </div>
-
         <!-- Quick Launch Sites -->
         <div class="settings-section-label">Quick Launch Sites</div>
         <div id="settings-sites-list"><!-- populated by app.js --></div>
@@ -145,6 +121,54 @@
                  type="text" placeholder="https://example.com" autocomplete="off" spellcheck="false" />
           <button id="settings-site-add-btn" class="settings-add-site-btn">Add</button>
         </div>
+
+        <!-- Advanced Settings fold-down -->
+        <details id="settings-advanced">
+          <summary id="settings-advanced-summary">Advanced</summary>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <span class="settings-row-label">Gap Between Boxes</span>
+              <span class="settings-row-desc">Space between each box in the grid</span>
+            </div>
+            <div class="settings-gap-controls">
+              <input type="range" id="setting-box-gap" class="settings-range"
+                     min="0" max="20" value="0" step="1" />
+              <span id="setting-box-gap-label" class="settings-range-label">0px</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <span class="settings-row-label">Corner Radius</span>
+              <span class="settings-row-desc">Roundness of each box's corners</span>
+            </div>
+            <div class="settings-gap-controls">
+              <input type="range" id="setting-box-rounded" class="settings-range"
+                     min="0" max="20" value="0" step="1" />
+              <span id="setting-box-rounded-label" class="settings-range-label">0%</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <span class="settings-row-label">Viewport Width</span>
+              <span class="settings-row-desc">Virtual width sites render at; Auto fills each box</span>
+            </div>
+            <div class="settings-gap-controls">
+              <input type="range" id="setting-box-zoom" class="settings-range"
+                     min="0" max="6" value="6" step="1" list="viewport-notches" />
+              <datalist id="viewport-notches">
+                <option value="0"></option><option value="1"></option>
+                <option value="2"></option><option value="3"></option>
+                <option value="4"></option><option value="5"></option>
+                <option value="6"></option>
+              </datalist>
+              <span id="setting-box-zoom-label" class="settings-range-label">1920px</span>
+            </div>
+          </div>
+
+        </details>
 
       </div>
       <div id="settings-footer">v1.0</div>
