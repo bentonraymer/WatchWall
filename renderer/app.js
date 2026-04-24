@@ -339,16 +339,12 @@ function renderSettingsSites() {
 }
 
 // ── URL Popup State ───────────────────────────────────────
-// engine persists across popup opens (global, not per-box).
-const urlPopup = { engine: 'youtube', targetBoxId: null };
+const urlPopup = { targetBoxId: null };
 
-function resolveUrl(raw, engine) {
+function resolveUrl(raw) {
   if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
   if (!raw.includes(' ') && raw.includes('.')) return 'https://' + raw;
-  const q = encodeURIComponent(raw);
-  return engine === 'youtube'
-    ? `https://www.youtube.com/results?search_query=${q}`
-    : `https://www.google.com/search?q=${q}`;
+  return `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
 }
 
 function openUrlPopup(boxId) {
@@ -364,7 +360,6 @@ function openUrlPopup(boxId) {
   input.select();
   document.getElementById('url-popup-backdrop').classList.add('visible');
   input.focus();
-  syncEngineToggle();
 }
 
 function closeUrlPopup() {
@@ -375,7 +370,7 @@ function closeUrlPopup() {
 function submitUrl() {
   const raw = document.getElementById('url-input').value.trim();
   if (raw) {
-    const resolved = resolveUrl(raw, urlPopup.engine);
+    const resolved = resolveUrl(raw);
     if (urlPopup.targetBoxId === null) {
       // New-box mode: create a box with the entered URL.
       addBox(resolved);
@@ -385,20 +380,6 @@ function submitUrl() {
     }
   }
   closeUrlPopup();
-}
-
-function syncEngineToggle() {
-  const btn = document.getElementById('url-engine-toggle');
-  if (!btn) return;
-  if (urlPopup.engine === 'youtube') {
-    btn.textContent = 'YT';
-    btn.style.color  = '#ff4e45';
-    btn.title = 'YouTube — click to switch to Google';
-  } else {
-    btn.textContent = 'G';
-    btn.style.color  = '#4d8df5';
-    btn.title = 'Google — click to switch to YouTube';
-  }
 }
 
 // ── Preferences ──────────────────────────────────────────
@@ -1360,11 +1341,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── URL Popup controls ───────────────────────────────
   const urlInput    = document.getElementById('url-input');
   const urlBackdrop = document.getElementById('url-popup-backdrop');
-
-  document.getElementById('url-engine-toggle').addEventListener('click', () => {
-    urlPopup.engine = urlPopup.engine === 'youtube' ? 'google' : 'youtube';
-    syncEngineToggle();
-  });
 
   document.getElementById('url-submit').addEventListener('click', submitUrl);
 

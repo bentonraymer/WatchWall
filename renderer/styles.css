@@ -858,29 +858,6 @@ input[type="color"].settings-color-input:disabled {
   padding: 5px 5px 5px 8px;
 }
 
-#url-engine-toggle {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid #3a3a3a;
-  background: #222;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 100ms, border-color 100ms;
-  line-height: 1;
-}
-
-#url-engine-toggle:hover {
-  background: #2e2e2e;
-  border-color: #555;
-}
 
 #url-input {
   flex: 1;
