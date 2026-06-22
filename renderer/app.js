@@ -168,11 +168,31 @@ LAYOUT_DEFS['main-top-1'] = {
   ],
 };
 
+// Equal pyramid: primary centered on top, two secondaries filling the bottom.
+//
+// Uses 4 equal columns so each box spans exactly 2 of them → all three boxes
+// are the same width and (via aspect-ratio: 16/9) the same height.
+// '2fr' instead of '1fr' bypasses the isEqualGrid check in resizeStage so the
+// ratio path is used (ratio = 16/9 makes span-2 boxes exactly 16:9 at gap=0;
+// at gap>0 the discrepancy is always less than one gap width, so no overlap).
+LAYOUT_DEFS['pyramid-3'] = {
+  label: 'Equal',
+  hasPrimarySlot: true,
+  gridTemplateColumns: '2fr 2fr 2fr 2fr',
+  gridTemplateRows:    '1fr 1fr',
+  ratio: 16 / 9,
+  placements: [
+    { col: '2 / span 2', row: '1' },  // primary: center-top
+    { col: '1 / span 2', row: '2' },  // secondary: bottom-left
+    { col: '3 / span 2', row: '2' },  // secondary: bottom-right
+  ],
+};
+
 // Layout Picker options per box count.
 const COUNT_LAYOUTS = {
   1:  ['full'],
   2:  ['equal-2',   'sidebar-1', 'main-top-1'],
-  3:  ['equal-3',   'sidebar-2',  'bottom-2'],
+  3:  ['pyramid-3', 'sidebar-2',  'bottom-2'],
   4:  ['equal-2x2', 'sidebar-3',  'bottom-3'],
   5:  ['equal-3x2', 'mixed-5',    'sidebar-4',  'bottom-4'],
   6:  ['equal-3x2', 'sidebar-5',  'bottom-5'],
@@ -192,7 +212,7 @@ const COUNT_LAYOUTS = {
 const DEFAULT_LAYOUT_FOR_COUNT = {
   1:  'full',
   2:  'equal-2',
-  3:  'equal-3',
+  3:  'pyramid-3',
   4:  'equal-2x2',
   5:  'sidebar-4',
   6:  'equal-3x2',
@@ -968,13 +988,24 @@ function renderNewBoxPicker() {
   grid.appendChild(urlBtn);
 }
 
+// Pick the best layout for a new box count by preserving the current family
+// (sidebar-, bottom-, equal-, pyramid-, etc.). Falls back to the default.
+function nextLayoutForCount(newCount) {
+  const prefix = (state.layout || '').match(/^([a-z-]+)/)?.[1];
+  if (prefix) {
+    const same = (COUNT_LAYOUTS[newCount] || []).find(k => k.startsWith(prefix));
+    if (same) return same;
+  }
+  return DEFAULT_LAYOUT_FOR_COUNT[newCount];
+}
+
 // ── Add Box ───────────────────────────────────────────────
 function addBox(url) {
   if (state.boxes.length >= 16) return;
 
   const box = { id: state.nextBoxId++, url: url || 'https://www.youtube.com', audioOverride: false };
   state.boxes.push(box);
-  state.layout = DEFAULT_LAYOUT_FOR_COUNT[state.boxes.length];
+  state.layout = nextLayoutForCount(state.boxes.length);
 
   // If the new default has a primary slot, put the highlighted box there.
   ensurePrimarySlot();
@@ -1087,7 +1118,7 @@ function closeBox(id) {
   // Compact remaining ids to 1..n (updates DOM, webviewMap, and state).
   renumberBoxes();
 
-  state.layout = DEFAULT_LAYOUT_FOR_COUNT[state.boxes.length];
+  state.layout = nextLayoutForCount(state.boxes.length);
   ensurePrimarySlot();
   applyGridLayout();
   resizeStage();
