@@ -16,7 +16,7 @@
     "build:all": "electron-builder -mwl --publish never"
   },
   "devDependencies": {
-    "electron": "^29.0.0",
+    "electron": "https://github.com/castlabs/electron-releases#v42.3.3+wvcus",
     "electron-builder": "^24.0.0"
   },
   "build": {

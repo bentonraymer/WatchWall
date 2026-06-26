@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, session, components } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -31,6 +31,22 @@ function createWindow() {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
     },
+  });
+
+  // Configure every <webview> guest before it attaches. Setting these here (as a
+  // real webPreferences object) is the reliable path — the webview element's
+  // `webpreferences=""` attribute string does not dependably disable isolation.
+  //
+  // contextIsolation:false + sandbox:false make the webview preload run in the
+  // page's MAIN world before any page script, so the Google-Chrome-brand shim in
+  // webview-preload.js is in place before DRM sites (Prime Video, etc.) run their
+  // browser-support check. nodeIntegration stays false, so guest pages still get
+  // no access to Node/Electron APIs.
+  mainWindow.webContents.on('will-attach-webview', (_event, webPreferences) => {
+    webPreferences.contextIsolation = false;
+    webPreferences.sandbox          = false;
+    webPreferences.nodeIntegration  = false;
+    webPreferences.preload          = path.join(__dirname, '../renderer/webview-preload.js');
   });
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
@@ -132,7 +148,40 @@ ipcMain.handle('window:restore-bounds', (_, bounds) => {
   }
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Download, verify, and load the VMP-signed Widevine CDM before opening any
+  // window. Provided by the castLabs electron-releases fork (the `components`
+  // module). Premium streaming sites (Prime Video, ESPN, Netflix, Disney+) gate
+  // playback on a verified Widevine CDM; without this they show a black screen
+  // or an "unsupported browser" page no matter how clean the user agent is.
+  // Require only the Widevine CDM (whenReady() with no argument implicitly
+  // requires all supported components, including the experimental Windows CDM
+  // that is unavailable on macOS). This is best-effort and non-fatal: if the
+  // Component Updater Service has no CDM for this OS/Chromium combination the
+  // promise rejects, we log it, and the app still runs for non-DRM sites.
+  try {
+    await components.whenReady([components.WIDEVINE_CDM_ID]);
+    console.log('Widevine CDM ready:', JSON.stringify(components.status()));
+  } catch (err) {
+    console.warn('Widevine CDM unavailable on this platform; DRM playback will not work:', err.message);
+  }
+
+  // Strip "Electron/x.x.x" and "WatchWall/x.x.x" from the default session user
+  // agent. Many streaming sites (ESPN, Prime Video, etc.) detect these tokens and
+  // either show an "unsupported browser" page or serve a broken/black experience.
+  // After this, the UA looks like a standard Chrome browser on the same OS.
+  const cleanUA = session.defaultSession.getUserAgent()
+    .replace(/\s*WatchWall\/\S+/, '')
+    .replace(/\s*Electron\/\S+/, '');
+  session.defaultSession.setUserAgent(cleanUA);
+
+  // Belt-and-suspenders: override the User-Agent header on every outgoing HTTP
+  // request so the clean UA is used even if a webview's own UA wasn't patched.
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    details.requestHeaders['User-Agent'] = cleanUA;
+    callback({ requestHeaders: details.requestHeaders });
+  });
+
   if (app.dock) app.dock.setIcon(ICON_PATH);
   createWindow();
 });

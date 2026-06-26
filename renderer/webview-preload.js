@@ -1,80 +1,55 @@
 // webview-preload.js
-// Runs in each webview's page context before any page scripts.
-// Intercepts the Fullscreen API so videos go fullscreen within
-// the webview's own viewport (the box) instead of taking over the OS window.
+// Runs in each webview's MAIN world (the webview sets contextIsolation=no) BEFORE
+// any page script. This timing + world is essential: DRM streaming sites such as
+// Prime Video run a browser-support check during initial page load, so the patch
+// must be in place before their scripts execute, and it must live in the main
+// world the page reads — a contextIsolation preload runs in an isolated world the
+// page never sees.
+//
+// Electron presents an otherwise-genuine Chromium identity (correct version,
+// platform, platformVersion, webdriver=false, window.chrome present) but its
+// User-Agent Client Hints advertise the brand as bare "Chromium" rather than
+// "Google Chrome". DRM sites whitelist the "Google Chrome" brand and reject plain
+// Chromium as unsupported. We make ONE minimal, fully-consistent change: add a
+// "Google Chrome" brand entry mirroring the REAL Chromium version, passing every
+// other value through untouched. We deliberately do NOT spoof webdriver,
+// window.chrome, or the OS version — those are already correct, and faking them
+// creates inconsistencies detection scripts flag.
 
 (function () {
-  let fakeFullscreenEl = null;
-  let savedInlineStyle = '';
+  try {
+    const uad = navigator.userAgentData;
+    if (!uad || !Array.isArray(uad.brands)) return;
+    if (uad.brands.some((b) => b.brand === 'Google Chrome')) return; // already present
 
-  function enterFakeFullscreen(el) {
-    if (fakeFullscreenEl === el) return;
-    if (fakeFullscreenEl) exitFakeFullscreen();
+    const chromium = uad.brands.find((b) => b.brand === 'Chromium');
+    if (!chromium) return;
+    const ver = chromium.version;
 
-    fakeFullscreenEl = el;
-    savedInlineStyle = el.style.cssText;
+    const addChrome = (list, fullVersion) =>
+      list.concat([{ brand: 'Google Chrome', version: fullVersion || ver }]);
 
-    el.style.cssText = [
-      savedInlineStyle,
-      'position:fixed!important',
-      'top:0!important',
-      'left:0!important',
-      'width:100%!important',
-      'height:100%!important',
-      'z-index:2147483647!important',
-      'background:#000!important',
-    ].join(';');
+    const realGHEV = uad.getHighEntropyValues.bind(uad);
+    const shim = {
+      brands:   addChrome(uad.brands),
+      mobile:   uad.mobile,
+      platform: uad.platform,
+      getHighEntropyValues(hints) {
+        return realGHEV(hints).then((v) => {
+          if (Array.isArray(v.brands)) v.brands = addChrome(v.brands);
+          if (Array.isArray(v.fullVersionList)) {
+            const cf = v.fullVersionList.find((b) => b.brand === 'Chromium');
+            v.fullVersionList = addChrome(v.fullVersionList, cf ? cf.version : undefined);
+          }
+          return v;
+        });
+      },
+      toJSON() { return { brands: addChrome(uad.brands), mobile: uad.mobile, platform: uad.platform }; },
+    };
 
-    // Spoof fullscreenElement so page UI (YouTube controls) reacts correctly
-    for (const prop of ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement']) {
-      Object.defineProperty(document, prop, { get: () => fakeFullscreenEl, configurable: true });
-    }
-
-    document.dispatchEvent(new Event('fullscreenchange'));
-    document.dispatchEvent(new Event('webkitfullscreenchange'));
-    document.dispatchEvent(new Event('mozfullscreenchange'));
-  }
-
-  function exitFakeFullscreen() {
-    if (!fakeFullscreenEl) return;
-
-    fakeFullscreenEl.style.cssText = savedInlineStyle;
-    fakeFullscreenEl = null;
-    savedInlineStyle = '';
-
-    for (const prop of ['fullscreenElement', 'webkitFullscreenElement', 'mozFullScreenElement']) {
-      Object.defineProperty(document, prop, { get: () => null, configurable: true });
-    }
-
-    document.dispatchEvent(new Event('fullscreenchange'));
-    document.dispatchEvent(new Event('webkitfullscreenchange'));
-    document.dispatchEvent(new Event('mozfullscreenchange'));
-  }
-
-  // Override request
-  Element.prototype.requestFullscreen = function () {
-    enterFakeFullscreen(this);
-    return Promise.resolve();
-  };
-  Element.prototype.webkitRequestFullscreen = function () {
-    enterFakeFullscreen(this);
-  };
-  Element.prototype.mozRequestFullScreen = function () {
-    enterFakeFullscreen(this);
-  };
-
-  // Override exit
-  document.exitFullscreen = function () {
-    exitFakeFullscreen();
-    return Promise.resolve();
-  };
-  document.webkitExitFullscreen = function () { exitFakeFullscreen(); };
-  document.mozCancelFullScreen  = function () { exitFakeFullscreen(); };
-
-  // Advertise fullscreen as supported and initially inactive
-  Object.defineProperty(document, 'fullscreenEnabled',        { get: () => true, configurable: true });
-  Object.defineProperty(document, 'webkitFullscreenEnabled',  { get: () => true, configurable: true });
-  Object.defineProperty(document, 'fullscreenElement',        { get: () => null, configurable: true });
-  Object.defineProperty(document, 'webkitFullscreenElement',  { get: () => null, configurable: true });
-  Object.defineProperty(document, 'mozFullScreenElement',     { get: () => null, configurable: true });
+    Object.defineProperty(Navigator.prototype, 'userAgentData', {
+      get() { return shim; },
+      configurable: true,
+    });
+  } catch (_) {}
 })();

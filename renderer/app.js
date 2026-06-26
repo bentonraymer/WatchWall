@@ -539,6 +539,12 @@ const state = {
   hotkeysEnabled: true,
 };
 
+// Clean UA: strip Electron and app identifiers defensively, in case the
+// session-level override in main.js hasn't propagated to navigator.userAgent yet.
+const WEBVIEW_UA = navigator.userAgent
+  .replace(/\s*WatchWall\/\S+/, '')
+  .replace(/\s*Electron\/\S+/, '');
+
 // Webview DOM nodes keyed by box ID — stored separately from state
 // so they can be reparented without being destroyed.
 const webviewMap = new Map(); // Map<boxId, HTMLWebViewElement>
@@ -799,11 +805,15 @@ function createBox(box) {
   wrapper.dataset.boxId = box.id;
 
   const wv = document.createElement('webview');
+  wv.useragent = WEBVIEW_UA;
+  // The webview's preload, contextIsolation and sandbox settings are applied in
+  // the main process via the 'will-attach-webview' handler (see main/main.js).
   wv.src = box.url;
 
   wv.addEventListener('dom-ready', () => {
     wv.executeJavaScript(FULLSCREEN_OVERRIDE).catch(() => {});
     wv.setAudioMuted(box.id !== state.highlightedBoxId && !box.audioOverride);
+    updateNavButtons();
   });
 
   // Safety net for macOS: if any fullscreen request bypasses the JS patches
@@ -817,8 +827,9 @@ function createBox(box) {
   });
 
   // Debounced URL autosave on every navigation (full-page and SPA).
-  wv.addEventListener('did-navigate',         scheduleUrlSave);
-  wv.addEventListener('did-navigate-in-page', scheduleUrlSave);
+  // Also refreshes the back/forward button disabled state.
+  wv.addEventListener('did-navigate',         () => { scheduleUrlSave(); updateNavButtons(); });
+  wv.addEventListener('did-navigate-in-page', () => { scheduleUrlSave(); updateNavButtons(); });
 
   // Click guard: transparent overlay on unhighlighted boxes captures the
   // click so YouTube doesn't see it (and won't pause). CSS sets
@@ -830,6 +841,25 @@ function createBox(box) {
   // Per-box hover menu (top-center, fades in on hover via CSS).
   const menu = document.createElement('div');
   menu.classList.add('box-menu');
+
+  const btnBack = document.createElement('button');
+  btnBack.classList.add('box-menu-btn', 'box-menu-btn--icon');
+  btnBack.title = 'Back';
+  btnBack.disabled = true;
+  btnBack.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2L4 6.5L8 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  btnBack.addEventListener('click', (e) => { e.stopPropagation(); wv.goBack(); });
+
+  const btnForward = document.createElement('button');
+  btnForward.classList.add('box-menu-btn', 'box-menu-btn--icon');
+  btnForward.title = 'Forward';
+  btnForward.disabled = true;
+  btnForward.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 2L9 6.5L5 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  btnForward.addEventListener('click', (e) => { e.stopPropagation(); wv.goForward(); });
+
+  const updateNavButtons = () => {
+    btnBack.disabled    = !wv.canGoBack();
+    btnForward.disabled = !wv.canGoForward();
+  };
 
   const btnGoToUrl = document.createElement('button');
   btnGoToUrl.classList.add('box-menu-btn', 'box-menu-btn--icon');
@@ -862,7 +892,7 @@ function createBox(box) {
   btnClose.disabled = state.boxes.length <= 1;
   btnClose.addEventListener('click', (e) => { e.stopPropagation(); closeBox(box.id); });
 
-  menu.append(btnGoToUrl, btnRefresh, btnHighlight, btnAudio, btnClose);
+  menu.append(btnBack, btnForward, btnGoToUrl, btnRefresh, btnHighlight, btnAudio, btnClose);
 
   const overlay = document.createElement('div');
   overlay.classList.add('box-overlay');
